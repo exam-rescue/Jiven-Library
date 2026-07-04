@@ -1,122 +1,231 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jiven Library</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-            color: #e2e8f0;
-            overflow: hidden;
-        }
-
-        .container {
-            text-align: center;
-            padding: 40px 24px;
-            max-width: 600px;
-        }
-
-        .icon {
-            font-size: 80px;
-            margin-bottom: 24px;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-12px); }
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 6px 18px;
-            background: rgba(251, 191, 36, 0.12);
-            border: 1px solid rgba(251, 191, 36, 0.3);
-            border-radius: 999px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #fbbf24;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            margin-bottom: 24px;
-        }
-
-        h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 42px;
-            font-weight: 700;
-            margin-bottom: 16px;
-            background: linear-gradient(135deg, #f8fafc, #94a3b8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .subtitle {
-            font-size: 16px;
-            color: #94a3b8;
-            line-height: 1.6;
-            margin-bottom: 40px;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 999px;
-            overflow: hidden;
-            margin-bottom: 16px;
-        }
-
-        .progress-bar .fill {
-            height: 100%;
-            width: 35%;
-            background: linear-gradient(90deg, #fbbf24, #f59e0b);
-            border-radius: 999px;
-            animation: loading 2s ease-in-out infinite;
-            background-size: 200% 100%;
-        }
-
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-
-        .progress-text {
-            font-size: 13px;
-            color: #64748b;
-        }
-
-        .footer {
-            position: fixed;
-            bottom: 24px;
-            width: 100%;
-            text-align: center;
-            font-size: 13px;
-            color: #475569;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jiven Library</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <meta name="description" content="Jiven Library - Your personal study companion for Class 6 CBSE">
+  <meta name="theme-color" content="#1a0f0a">
 </head>
 <body>
-    <div class="container">
-        <div class="icon">&#x1F4DA;</div>
-        <div class="badge">Coming Soon</div>
-        <h1>Jiven Library</h1>
-        <p class="subtitle">Something exciting is being built here.<br>Stay tuned &mdash; we'll be back soon!</p>
-        <div class="progress-bar"><div class="fill"></div></div>
-        <p class="progress-text">Construction under progress</p>
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="logo" onclick="navigate('home')">📚 Jiven Library</div>
+      <div class="rank-badge" id="rankBadge" onclick="navigate('achievements')">
+        <span class="rank-icon" id="rankIcon">📄</span>
+        <span id="rankName">Page Turner</span>
+      </div>
     </div>
-    <div class="footer">&copy; 2026 Jiven Library</div>
+    <div class="top-bar-center">
+      <div class="xp-bar-container">
+        <span class="xp-bar-label" id="xpLabel">0 / 300 XP</span>
+        <div class="xp-bar-track">
+          <div class="xp-bar-fill" id="xpFill" style="width: 0%"></div>
+        </div>
+        <span class="xp-bar-text" id="xpText">0 XP</span>
+      </div>
+    </div>
+    <div class="top-bar-right">
+      <div class="streak-display" id="streakDisplay" onclick="navigate('dashboard')">
+        <span>🔥</span>
+        <span class="streak-count" id="streakCount">0</span>
+      </div>
+      <button class="nav-btn" onclick="navigate('notes')" title="Notes">📝</button>
+      <button class="nav-btn" onclick="navigate('mistakes')" title="Mistakes">📒</button>
+      <button class="nav-btn" onclick="navigate('dashboard')" title="Dashboard">📊</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <!-- HOME / BOOKSHELF -->
+    <div class="page active" id="page-home">
+      <div class="bookshelf-header">
+        <h1>Welcome back, Jiven! 📖</h1>
+        <p>Choose a subject to start studying</p>
+      </div>
+      <div class="daily-challenge-banner" id="dailyChallenge" onclick="startDailyChallenge()">
+        <div class="daily-challenge-left">
+          <span class="daily-challenge-icon">🎯</span>
+          <div class="daily-challenge-info">
+            <h3>Daily Challenge</h3>
+            <p id="dailyChallengeText">10 mixed questions — Earn 50 bonus XP!</p>
+          </div>
+        </div>
+        <span class="daily-challenge-arrow">→</span>
+      </div>
+      <div class="bookshelf" id="bookshelf"></div>
+    </div>
+
+    <!-- SUBJECT PAGE -->
+    <div class="page" id="page-subject">
+      <div class="subject-header">
+        <button class="back-btn" onclick="navigate('home')">← Back</button>
+        <h2 class="subject-title" id="subjectTitle">Mathematics</h2>
+        <div class="mistakes-badge" id="subjectMistakesBadge" onclick="navigate('mistakes')">
+          📒 <span id="subjectMistakesCount">0</span> to review
+        </div>
+      </div>
+      <div class="chapters-grid" id="chaptersGrid"></div>
+    </div>
+
+    <!-- QUIZ PAGE (MCQ) -->
+    <div class="page" id="page-quiz">
+      <div class="quiz-header">
+        <button class="back-btn" onclick="confirmQuitQuiz()">← Quit</button>
+        <div class="quiz-progress-info">
+          Question <strong id="quizCurrent">1</strong> of <strong id="quizTotal">10</strong>
+        </div>
+        <div class="quiz-timer" id="quizTimer">⏱ 0:00</div>
+      </div>
+      <div class="quiz-progress-bar">
+        <div class="quiz-progress-fill" id="quizProgressFill" style="width: 0%"></div>
+      </div>
+      <div class="question-card" id="questionCard">
+        <div class="question-text" id="questionText">Loading question...</div>
+        <div class="options-list" id="optionsList"></div>
+        <div class="explanation-box" id="explanationBox" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- WRITTEN ANSWER PAGE -->
+    <div class="page" id="page-written">
+      <div class="quiz-header">
+        <button class="back-btn" onclick="confirmQuitWritten()">← Back</button>
+        <div class="quiz-progress-info">
+          Question <strong id="writtenCurrent">1</strong> of <strong id="writtenTotal">5</strong>
+        </div>
+      </div>
+      <div class="quiz-progress-bar">
+        <div class="quiz-progress-fill" id="writtenProgressFill" style="width: 0%"></div>
+      </div>
+      <div class="written-card" id="writtenCard">
+        <div class="written-question" id="writtenQuestion">Loading...</div>
+        <div class="written-hints" id="writtenHints"></div>
+        <textarea class="answer-textarea" id="answerTextarea" placeholder="Write your answer here..."></textarea>
+        <div class="char-count"><span id="charCount">0</span> characters</div>
+        <button class="submit-btn" id="submitWrittenBtn" onclick="submitWrittenAnswer()">Submit Answer</button>
+        <div class="model-answer-panel" id="modelAnswerPanel" style="display:none">
+          <h4>Model Answer</h4>
+          <div class="model-answer-text" id="modelAnswerText"></div>
+          <div class="self-eval" id="selfEval">
+            <span class="self-eval-label">How well did you do?</span>
+            <div class="star-rating" id="starRating">
+              <button class="star-btn" onclick="rateAnswer(1)">⭐</button>
+              <button class="star-btn" onclick="rateAnswer(2)">⭐</button>
+              <button class="star-btn" onclick="rateAnswer(3)">⭐</button>
+              <button class="star-btn" onclick="rateAnswer(4)">⭐</button>
+              <button class="star-btn" onclick="rateAnswer(5)">⭐</button>
+            </div>
+          </div>
+          <label class="add-note-check">
+            <input type="checkbox" id="addToNotes"> Add question & model answer to my notes
+          </label>
+          <div style="margin-top:16px; text-align:right;">
+            <button class="submit-btn" id="nextWrittenBtn" onclick="nextWrittenQuestion()" style="display:none">Next Question →</button>
+            <button class="submit-btn" id="finishWrittenBtn" onclick="finishWrittenQuiz()" style="display:none">See Results</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS PAGE -->
+    <div class="page" id="page-results">
+      <div class="results-container">
+        <div class="score-circle-container">
+          <svg class="score-circle" viewBox="0 0 160 160">
+            <circle class="score-circle-bg" cx="80" cy="80" r="70"/>
+            <circle class="score-circle-fill" id="scoreCircleFill" cx="80" cy="80" r="70"/>
+          </svg>
+          <div class="score-circle-text" id="scoreText">0%</div>
+        </div>
+        <h2 class="results-title" id="resultsTitle">Quiz Complete!</h2>
+        <p class="results-subtitle" id="resultsSubtitle">Great effort, Jiven!</p>
+        <div class="results-stats">
+          <div class="result-stat">
+            <div class="result-stat-value" id="resCorrect">0</div>
+            <div class="result-stat-label">Correct</div>
+          </div>
+          <div class="result-stat">
+            <div class="result-stat-value" id="resWrong">0</div>
+            <div class="result-stat-label">Wrong</div>
+          </div>
+          <div class="result-stat">
+            <div class="result-stat-value" id="resTime">0:00</div>
+            <div class="result-stat-label">Time</div>
+          </div>
+        </div>
+        <div class="results-xp">
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">XP Earned</div>
+          <div class="results-xp-value" id="resXP">+0 XP</div>
+        </div>
+        <div class="results-actions">
+          <button class="result-btn primary" id="resNextBtn" onclick="goNextAfterResults()">Next Chapter →</button>
+          <button class="result-btn secondary" id="resMistakesBtn" onclick="navigate('mistakes')" style="display:none">Review Mistakes</button>
+          <button class="result-btn secondary" onclick="goBackFromResults()">← Back</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MISTAKE JOURNAL -->
+    <div class="page" id="page-mistakes">
+      <div class="subject-header">
+        <button class="back-btn" onclick="navigate('home')">← Back</button>
+        <h2 class="subject-title">Mistake Journal 📒</h2>
+      </div>
+      <div class="mistake-tabs" id="mistakeTabs"></div>
+      <div id="mistakesList"></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="page" id="page-dashboard">
+      <div class="subject-header">
+        <button class="back-btn" onclick="navigate('home')">← Back</button>
+        <h2 class="subject-title">Study Dashboard 📊</h2>
+      </div>
+      <div class="dashboard-grid" id="dashStats"></div>
+      <div class="dash-charts">
+        <div class="dash-chart-card">
+          <h3>Subject Accuracy</h3>
+          <canvas id="radarChart" width="300" height="300"></canvas>
+        </div>
+        <div class="dash-chart-card">
+          <h3>This Week's Activity</h3>
+          <div class="heatmap-grid" id="heatmapGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="page" id="page-notes">
+      <div class="notes-header">
+        <h2>My Notes 📝</h2>
+        <button class="add-note-btn" onclick="openNoteModal()">+ New Note</button>
+      </div>
+      <input type="text" class="notes-search" id="notesSearch" placeholder="Search notes..." oninput="renderNotes()">
+      <div id="notesList"></div>
+    </div>
+
+    <!-- ACHIEVEMENTS -->
+    <div class="page" id="page-achievements">
+      <div class="subject-header">
+        <button class="back-btn" onclick="navigate('home')">← Back</button>
+        <h2 class="subject-title">Achievements 🏆</h2>
+      </div>
+      <div class="achievements-grid" id="achievementsGrid"></div>
+    </div>
+
+  </div>
+
+  <!-- MODAL CONTAINER -->
+  <div id="modalContainer"></div>
+
+  <script src="questions.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
