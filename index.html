@@ -35,6 +35,7 @@
         <span class="streak-count" id="streakCount">0</span>
       </div>
       <button class="nav-btn" onclick="navigate('notes')" title="Notes">📝</button>
+      <button class="nav-btn" onclick="navigate('assignments')" title="Assignments">📋</button>
       <button class="nav-btn" onclick="navigate('mistakes')" title="Mistakes">📒</button>
       <button class="nav-btn" onclick="navigate('dashboard')" title="Dashboard">📊</button>
     </div>
@@ -209,6 +210,26 @@
       </div>
       <input type="text" class="notes-search" id="notesSearch" placeholder="Search notes..." oninput="renderNotes()">
       <div id="notesList"></div>
+    </div>
+
+    <!-- ASSIGNMENTS -->
+    <div class="page" id="page-assignments">
+      <div class="subject-header">
+        <button class="back-btn" onclick="navigate('home')">← Back</button>
+        <h2 class="subject-title">Assignments 📋</h2>
+      </div>
+      <div id="assignmentsList"></div>
+    </div>
+
+    <!-- ASSIGNMENT QUIZ (reuses quiz page but with different back action) -->
+
+    <!-- RANK DETAILS -->
+    <div class="page" id="page-ranks">
+      <div class="subject-header">
+        <button class="back-btn" onclick="navigate('home')">← Back</button>
+        <h2 class="subject-title">Rank System 🏅</h2>
+      </div>
+      <div id="rankDetailsContent"></div>
     </div>
 
     <!-- ACHIEVEMENTS -->

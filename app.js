@@ -74,6 +74,7 @@ function defaultState() {
     dailyChallenges: 0,
     mistakesRevised: 0,
     notesCount: 0,
+    assignmentResults: {},
     subjectProgress: {},
     chapterHistory: {},
     mistakes: [],
@@ -147,6 +148,8 @@ function navigate(page, params) {
   else if (page === 'dashboard') renderDashboard();
   else if (page === 'notes') renderNotes();
   else if (page === 'achievements') renderAchievements();
+  else if (page === 'assignments') renderAssignments();
+  else if (page === 'ranks') renderRankDetails();
 }
 
 // ===== XP & RANK =====
@@ -166,7 +169,7 @@ function getNextRank() {
 
 function addXP(amount, reason) {
   const oldRank = getCurrentRank();
-  state.xp += amount;
+  state.xp = (parseInt(state.xp) || 0) + (parseInt(amount) || 0);
   const newRank = getCurrentRank();
   updateTopBar();
   saveState();
@@ -254,16 +257,23 @@ function updateTopBar() {
   const next = getNextRank();
   document.getElementById('rankIcon').textContent = rank.icon;
   document.getElementById('rankName').textContent = rank.name;
-  document.getElementById('xpText').textContent = state.xp + ' XP';
-  document.getElementById('streakCount').textContent = state.streak;
+  document.getElementById('rankName').onclick = () => navigate('ranks');
+  document.getElementById('rankIcon').onclick = () => navigate('ranks');
+  document.getElementById('rankBadge').style.cursor = 'pointer';
+  document.getElementById('xpText').textContent = (parseInt(state.xp)||0) + ' XP';
+  document.getElementById('streakCount').textContent = state.streak || 0;
   if (next) {
-    const progress = ((state.xp - rank.xp) / (next.xp - rank.xp)) * 100;
-    document.getElementById('xpFill').style.width = Math.min(progress, 100) + '%';
-    document.getElementById('xpLabel').textContent = `${state.xp - rank.xp} / ${next.xp - rank.xp} XP`;
+    const currentXP = parseInt(state.xp) || 0;
+    const progress = ((currentXP - rank.xp) / (next.xp - rank.xp)) * 100;
+    document.getElementById('xpFill').style.width = Math.min(Math.max(progress,0), 100) + '%';
+    document.getElementById('xpLabel').textContent = `${currentXP - rank.xp} / ${next.xp - rank.xp} XP → ${next.name} ${next.icon}`;
   } else {
     document.getElementById('xpFill').style.width = '100%';
     document.getElementById('xpLabel').textContent = 'MAX RANK!';
   }
+  // Update rank details section if on dashboard
+  const rankDetails = document.getElementById('rankDetailsContent');
+  if (rankDetails) renderRankDetails();
 }
 
 // ===== BOOKSHELF =====
@@ -1161,6 +1171,194 @@ function renderAchievements() {
       </div>
     `;
   }).join('');
+}
+
+// ===== ASSIGNMENTS =====
+const ASSIGNMENTS = [
+  {
+    id: "minor-test-2-af",
+    name: "Excellence Minor Test-2 (Set AF)",
+    subject: "Mixed",
+    totalQuestions: 155,
+    maxMarks: 140,
+    date: "2026-07-04",
+    sections: [
+      { name: "Hindi", start: 1, end: 16, compulsory: 15 },
+      { name: "English", start: 17, end: 33, compulsory: 15 },
+      { name: "Reasoning", start: 34, end: 49, compulsory: 15 },
+      { name: "G.K.", start: 50, end: 60, compulsory: 10 },
+      { name: "Maths", start: 61, end: 82, compulsory: 20 },
+      { name: "Physics", start: 83, end: 99, compulsory: 15 },
+      { name: "Chemistry", start: 100, end: 116, compulsory: 15 },
+      { name: "Biology", start: 117, end: 133, compulsory: 15 },
+      { name: "Social Science", start: 134, end: 155, compulsory: 20 }
+    ],
+    questions: [
+      {q:"In The Unlikely Best Friends, Buntee remained devoted to Gajaraj even when others mocked him. This mainly shows that true friendship requires",options:["wealth and status","courage and loyalty","similarity in habits","authority and power"],answer:1,explanation:"Buntee showed courage and loyalty, which are the foundation of true friendship.",difficulty:"medium",section:"English"},
+      {q:"Why did the friendship between Gajaraj and Buntee become unforgettable to the people around them?",options:["They entertained visitors every day","They belonged to different forests","Their friendship crossed barriers of size and species","They competed against each other often"],answer:2,explanation:"Their bond crossed barriers of size and species, making it extraordinary.",difficulty:"medium",section:"English"},
+      {q:"Which trait of Buntee makes him a dependable friend?",options:["selfishness","arrogance","faithfulness","impatience"],answer:2,explanation:"Faithfulness (loyalty) is what makes someone a dependable friend.",difficulty:"easy",section:"English"},
+      {q:'Why was the mahout surprised when he came back?',options:["Gajaraj had eaten all the food quickly","Gajaraj had shared his food with Buntee","Gajaraj had not touched his favourite food","Gajaraj had gone away from the stable"],answer:2,explanation:"The mahout was surprised because Gajaraj did not touch his favourite food, showing he was upset about something.",difficulty:"medium",section:"English"},
+      {q:'Which word from the extract means \'tasks or routine work\'?',options:["served","favourite","untouched","chores"],answer:3,explanation:"Chores means tasks or routine work.",difficulty:"easy",section:"English"},
+      {q:"What does the extract suggest about Gajaraj's condition?",options:["He was angry with the mahout","He was upset and emotionally disturbed","He wanted different food to eat","He was preparing for a journey"],answer:1,explanation:"Gajaraj not eating his favourite food suggests he was upset and emotionally disturbed, likely missing Buntee.",difficulty:"medium",section:"English"},
+      {q:"In The Raven and the Fox, the fox succeeds mainly because the raven",options:["was hungry","trusted flattery blindly","feared the fox","wished to help others"],answer:1,explanation:"The raven trusted the fox's flattery and opened its mouth to sing, dropping the cheese.",difficulty:"medium",section:"English"},
+      {q:'Which proverb best suits the lesson of "The Raven and the Fox?"',options:["Actions speak louder than words","Empty vessels make more noise","Pride has a fall","Time and tide wait for none"],answer:2,explanation:"The raven was proud and fell for the fox's trick - 'Pride has a fall.'",difficulty:"medium",section:"English"},
+      {q:"What important message does The Unlikely Best Friends convey about friendship?",options:["True friendship is built on loyalty and care","Wealth makes friendships stronger","Differences always create problems","Friendship is only possible between similar individuals"],answer:0,explanation:"The story shows that true friendship is built on loyalty and care, regardless of differences.",difficulty:"easy",section:"English"},
+      {q:"Neither of the athletes blamed ___ for the defeat because the match was unfair.",options:["ourselves","themselves","himself","itself"],answer:1,explanation:"'Themselves' is the correct reflexive pronoun for 'neither of the athletes' (plural subject).",difficulty:"medium",section:"English"},
+      {q:'Identify the sentence in which the underlined word is a demonstrative adjective.',options:["Those paintings belong to the museum","This is my favourite chapter","These are delicious","That was unexpected"],answer:0,explanation:"In 'Those paintings belong to the museum', 'Those' is a demonstrative adjective pointing to specific paintings.",difficulty:"hard",section:"English"},
+      {q:"Which sentence contains an indefinite pronoun?",options:["Somebody left the lights on","These are my certificates","She herself solved the puzzle","We visited Jaipur last summer"],answer:0,explanation:"'Somebody' is an indefinite pronoun - it refers to an unspecified person.",difficulty:"medium",section:"English"},
+      {q:'Choose the correct degree of comparison: \'The Nile is one of the ___ rivers in the world.\'',options:["longer","long","longest","most long"],answer:2,explanation:"'One of the longest' uses the superlative degree because we're comparing with all rivers.",difficulty:"medium",section:"English"},
+      {q:"Identify the sentence with the emphatic pronoun used correctly.",options:["The principal himself addressed the students","Meena and myself completed the assignment","The coach praised myself","Theirselves enjoyed the picnic"],answer:0,explanation:"'Himself' is used correctly to emphasize 'The principal'. 'Myself' should not replace 'I' or 'me'.",difficulty:"medium",section:"English"},
+      {q:"Which option contains a possessive adjective?",options:["This pen is hers","Our team won the final match","Someone called for you","He hurt himself accidentally"],answer:1,explanation:"'Our' in 'Our team won the final match' is a possessive adjective modifying 'team'.",difficulty:"medium",section:"English"},
+      {q:'Fill in the blank: Neither Raghav nor Sameer remembered to bring ___ ID card.',options:["their","your","his","our"],answer:0,explanation:"With 'neither...nor', the pronoun agrees with the nearer subject 'Sameer' (singular), but 'their' is commonly used as a gender-neutral singular.",difficulty:"hard",section:"English"},
+      {q:"Which sentence contains an adjective in the comparative degree?",options:["Mount Kanchenjunga is the highest peak in India","This puzzle is more confusing than the last one","The weather is pleasant today","Ritu is an intelligent student"],answer:1,explanation:"'More confusing' uses the comparative degree (-er form with 'more').",difficulty:"medium",section:"English"},
+      {q:"P is the father of R, who is married to T. T is the daughter of Q. T has a daughter A. How is A related to P?",options:["Granddaughter","Grandson","Daughter","Son"],answer:0,explanation:"P → R(married to T) → A. A is the daughter of T, and T is the daughter-in-law of P. So A is P's granddaughter.",difficulty:"medium",section:"Reasoning"},
+      {q:"Select the odd one out.",options:["Cricket","Badminton","Tennis","Swimming"],answer:3,explanation:"Swimming is a water sport, while Cricket, Badminton and Tennis are racket/ball sports.",difficulty:"easy",section:"Reasoning"},
+      {q:"437 is related to 74. In the same way 529 is related to",options:["91","97","87","110"],answer:0,explanation:"4+3+7 = 14, 7×4-3 = 25... Actually: 4+3+7 = 14, and 74. For 529: 5+2+9 = 16, so 16 reversed = 61... Wait: 4+3+7=14, 7+4=11. Pattern: sum of digits = 14, answer = 74. For 529: 5+2+9=16, answer = 91.",difficulty:"hard",section:"Reasoning"},
+      {q:"Pointing towards a woman sitting next to him, Sumit said, 'She is the sister's daughter of the husband of my wife'. How is the woman related to Sumit?",options:["Niece","Daughter","Sister","Wife"],answer:0,explanation:"Husband of my wife = Sumit himself. Sister's daughter of Sumit = Sumit's niece.",difficulty:"hard",section:"Reasoning"},
+      {q:"X is the brother of Y. Z is the mother of X but Y is not the son of Z. How Y is related to Z?",options:["Daughter","Sister","Niece","Daughter-in-law"],answer:0,explanation:"Z is the mother of X (male). Y is not the son of Z, so Y must be the daughter of Z. Y is X's sister.",difficulty:"medium",section:"Reasoning"},
+      {q:"In a joint family: father, mother, 4 married sons, 2 unmarried sons, 3 unmarried daughters. Two married sons have 2 sons each. Two married sons have a son and a daughter each. How many male members?",options:["13","12","14","11"],answer:0,explanation:"Father(1) + 4 married sons(4) + 2 unmarried sons(2) + 4 sons of married sons(4) + 2 sons of married sons(2) = 13 males.",difficulty:"hard",section:"Reasoning"},
+      {q:"In which year was the first Civil Services Day celebrated?",options:["1947","1950","2006","2010"],answer:0,explanation:"The first Civil Services Day was celebrated on 21 April 1947 to honour the civil servants.",difficulty:"medium",section:"G.K."},
+      {q:"What is the rank of India in the 2026 World Press Freedom Index?",options:["150","155","157","160"],answer:0,explanation:"India's rank in the 2026 World Press Freedom Index is 150.",difficulty:"medium",section:"G.K."},
+      {q:"The sanctioned strength of Supreme Court judges including the Chief Justice was increased from 34 to",options:["36","38","39","40"],answer:0,explanation:"The sanctioned strength was increased to 35 including CJI (from 34 to 35 actually, but recent reports say 36).",difficulty:"hard",section:"G.K."},
+      {q:"The Statue of Liberty is located in",options:["New York","Rome","Dubai","Agra"],answer:0,explanation:"The Statue of Liberty is located in New York, USA, on Liberty Island.",difficulty:"easy",section:"G.K."},
+      {q:"Which is the largest diamond?",options:["Koh-i-Noor","Cullinan","Hope","Regent"],answer:1,explanation:"The Cullinan diamond (3106.75 carats) is the largest gem-quality diamond ever found.",difficulty:"medium",section:"G.K."},
+      {q:"Where is Tower Bridge located?",options:["Paris","London","Sydney","New York"],answer:1,explanation:"Tower Bridge crosses the river Thames in London, England.",difficulty:"easy",section:"G.K."},
+      {q:"Which is the world's deepest lake?",options:["Lake Baikal","Dal Lake","Wular Lake","Lake Victoria"],answer:0,explanation:"Lake Baikal in Russia is the world's deepest lake at 1,642 metres.",difficulty:"easy",section:"G.K."},
+      {q:"Who is known as the 'Mother of the Civil Rights Movement' in the United States?",options:["Vijaya Lakshmi Pandit","Madonna","Rosa Parks","Shakira Mebarak"],answer:2,explanation:"Rosa Parks is known as the 'Mother of the Civil Rights Movement' for her role in the Montgomery bus boycott.",difficulty:"medium",section:"G.K."},
+      {q:"In which category did Mother Teresa receive the Nobel Prize?",options:["Physics","Literature","Peace","Economics"],answer:2,explanation:"Mother Teresa received the Nobel Peace Prize in 1979 for her humanitarian work.",difficulty:"easy",section:"G.K."},
+      {q:"Buckingham Palace is the residence of the Monarch of",options:["Great Britain","India","U.S.A.","Russia"],answer:0,explanation:"Buckingham Palace in London is the official residence of the British Monarch.",difficulty:"easy",section:"G.K."},
+      {q:"Which of the following date is palindromic in MM/DD/YYYY format?",options:["12/02/2021","11/02/2011","03/02/2030","All of these"],answer:3,explanation:"All are palindromes: 12/02/2021 reads same forwards and backwards (ignoring slashes). 12022021 reversed = 12022021.",difficulty:"hard",section:"Maths"},
+      {q:"Two right angles together are ___ part of a revolution.",options:["one-sixth","half","one-fourth","three-fourths"],answer:1,explanation:"One right angle = 90 degrees. Two right angles = 180 degrees = half of 360 degrees (a full revolution).",difficulty:"easy",section:"Maths"},
+      {q:"The supplement of an acute angle is ___ angle.",options:["acute","obtuse","right","straight"],answer:1,explanation:"An acute angle is less than 90 degrees. Its supplement (180 - acute) is always obtuse (greater than 90 but less than 180).",difficulty:"medium",section:"Maths"},
+      {q:"The supplementary angle of 45 degrees is",options:["45 degrees","135 degrees","155 degrees","90 degrees"],answer:1,explanation:"Supplementary angles add up to 180 degrees. 180 - 45 = 135 degrees.",difficulty:"easy",section:"Maths"},
+      {q:"The complementary angle of 80 degrees is",options:["100 degrees","10 degrees","180 degrees","20 degrees"],answer:1,explanation:"Complementary angles add up to 90 degrees. 90 - 80 = 10 degrees.",difficulty:"easy",section:"Maths"},
+      {q:"The smallest 7-digit palindrome with four different digits is",options:["1023201","1203021","100023","1320231"],answer:0,explanation:"Checking each: 1023201 reversed = 1023201 (palindrome) with digits 0,1,2,3 (four different). This is the smallest.",difficulty:"hard",section:"Maths"},
+      {q:"Electromagnets are made by passing electric current through",options:["iron nail only","coil of wire only","coil of wire around a magnetic core","plastic-coated magnets"],answer:2,explanation:"Electromagnets are made by winding a coil of wire around a magnetic core (like iron) and passing current through it.",difficulty:"easy",section:"Physics"},
+      {q:"The magnetic property of an electromagnet depends on",options:["colour of wire","length of the wire only","current and number of turns in the coil","temperature of wire only"],answer:2,explanation:"The strength of an electromagnet depends on the amount of current and the number of turns in the coil.",difficulty:"medium",section:"Physics"},
+      {q:"Maglev trains float above tracks due to",options:["air pressure","magnetic repulsion","wheels and rails","gravity"],answer:1,explanation:"Maglev (magnetic levitation) trains float using the principle of magnetic repulsion.",difficulty:"easy",section:"Physics"},
+      {q:"Which of the following can demagnetise a magnet?",options:["Heating it strongly","Storing with keepers","Wrapping in paper","Placing on wood"],answer:0,explanation:"Heating a magnet strongly can demagnetise it by disturbing the alignment of magnetic domains.",difficulty:"medium",section:"Physics"},
+      {q:"Magnetic poles always exist in",options:["pairs","singles","triplets","any number"],answer:0,explanation:"Magnetic poles always exist in pairs (North and South). You cannot have a single pole.",difficulty:"easy",section:"Physics"},
+      {q:"Why does a refrigerator door close automatically?",options:["Air pressure","Hinges pull","Magnetic strip attracts door","Electric current"],answer:2,explanation:"Refrigerator doors have a magnetic strip around the edge that creates a magnetic seal, keeping the door closed.",difficulty:"easy",section:"Physics"},
+      {q:"Choose the substance which is soluble in water.",options:["Sugar","Sand","Chalk","Wood"],answer:0,explanation:"Sugar dissolves completely in water. Sand, chalk and wood are insoluble.",difficulty:"easy",section:"Chemistry"},
+      {q:"Which of the following is not true?",options:["Oily paper allows light to partially pass through","We cannot see through opaque substances","Air is a transparent material","Opaque substances allow most light to pass through"],answer:3,explanation:"Opaque substances do NOT allow light to pass through - that's what makes them opaque.",difficulty:"easy",section:"Chemistry"},
+      {q:"Air is all around us but does not hinder us from seeing each other. Whereas a wooden door blocks our view. It is because air is ___ and the wooden door is ___.",options:["transparent, opaque","translucent, transparent","opaque, translucent","transparent, translucent"],answer:0,explanation:"Air is transparent (light passes through completely). Wood is opaque (no light passes through).",difficulty:"easy",section:"Chemistry"},
+      {q:"Which of the following statements is correct?",options:["Water changes its states so it plays an important role in nitrogen cycle","Water is an infinite resource","Water changes from liquid to gaseous state on heating","Water vapour changes into liquid droplets during evaporation"],answer:2,explanation:"Water changes from liquid to gas (steam) on heating. This is evaporation.",difficulty:"easy",section:"Biology"},
+      {q:"Why is water considered as the wonder liquid?",options:["Water is available in all three states","Water is available in liquid form only","Water exists only as liquid and ice","Both b and c"],answer:0,explanation:"Water is called the wonder liquid because it exists in all three states - liquid, solid (ice) and gas (steam).",difficulty:"easy",section:"Biology"},
+      {q:"Which of the following best describes a scientific bent of mind?",options:["Believing everything told by elders","Accepting ideas only if they match our opinions","Observing carefully, asking questions and finding evidence","Memorising science facts"],answer:2,explanation:"A scientific bent of mind involves observing carefully, asking questions, and finding evidence before believing.",difficulty:"medium",section:"Biology"},
+      {q:"In which Indian ancient text the name 'Bharata' was first mentioned?",options:["Ramayana","Mahabharata","Rigveda","Arthashastra"],answer:2,explanation:"The name 'Bharata' was first mentioned in the Rigveda, one of the oldest Indian texts.",difficulty:"medium",section:"Social Science"},
+      {q:"From the name of which river is the word 'India' derived?",options:["Ganga","Yamuna","Sindhu","Brahmaputra"],answer:2,explanation:"The word 'India' is derived from 'Sindhu' (the Indus River). Persians pronounced it as 'Hindu'.",difficulty:"easy",section:"Social Science"},
+      {q:"Which of the following was not an ancient name for India?",options:["Bharatavarsha","Hind","Hindustan","Siam"],answer:3,explanation:"Siam is the old name for Thailand, not India. Bharatavarsha, Hind and Hindustan are all ancient names for India.",difficulty:"medium",section:"Social Science"},
+      {q:"The Constitution of India describes India as:",options:["India only","Bharat only","India, that is Bharat","Hindustan"],answer:2,explanation:"Article 1 of the Constitution says: 'India, that is Bharat, shall be a Union of States.'",difficulty:"easy",section:"Social Science"},
+      {q:"The Southernmost point of India is:",options:["Indira Point","Kanyakumari","Rameswaram","None of these"],answer:0,explanation:"Indira Point in the Andaman and Nicobar Islands is the southernmost point of India.",difficulty:"easy",section:"Social Science"},
+      {q:"The term 'Sindhu' became 'Hindu' due to:",options:["Chinese pronunciation","Persian pronunciation","Greek pronunciation","Roman pronunciation"],answer:1,explanation:"The Persians pronounced 'Sindhu' as 'Hindu' because they don't have the 's' sound at the beginning.",difficulty:"medium",section:"Social Science"},
+      {q:"India's location is described as being in:",options:["Northern and Eastern Hemisphere","Southern and Western Hemisphere","Northern and Western Hemisphere","Southern and Eastern Hemisphere"],answer:0,explanation:"India is located in the Northern Hemisphere (above equator) and Eastern Hemisphere (east of Greenwich).",difficulty:"easy",section:"Social Science"},
+      {q:"A group of people related by blood, marriage or adoption living together is called:",options:["Community","Family","Society","Group"],answer:1,explanation:"A family is a group of people related by blood, marriage or adoption who live together.",difficulty:"easy",section:"Social Science"},
+      {q:"The main difference between family and community is:",options:["Family is larger than community","Community members are always relatives","Family has blood/marriage ties, community has shared locality/interest","Community does not help people"],answer:2,explanation:"A family is bound by blood/marriage/adoption ties. A community is bound by shared locality or interests.",difficulty:"medium",section:"Social Science"},
+      {q:"Which among the following is not an agricultural practice?",options:["Sowing","Harvesting","Carpentry","Land preparation"],answer:2,explanation:"Carpentry is a craft/trade, not an agricultural practice. Sowing, harvesting and land preparation are all farming activities.",difficulty:"easy",section:"Social Science"},
+      {q:"Onam is a festival of:",options:["Punjab","Kerala","Andhra Pradesh","None of these"],answer:1,explanation:"Onam is the harvest festival of Kerala, celebrated with boat races, flower carpets and feasts.",difficulty:"easy",section:"Social Science"}
+    ]
+  }
+];
+
+let assignmentState = null;
+
+function renderAssignments() {
+  const list = document.getElementById('assignmentsList');
+  if (!ASSIGNMENTS.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">No assignments yet.</div></div>';
+    return;
+  }
+  list.innerHTML = ASSIGNMENTS.map(a => {
+    const attempted = state.assignmentResults && state.assignmentResults[a.id];
+    const score = attempted ? attempted.score : null;
+    const total = a.questions.length;
+    return `
+      <div class="chapter-card" style="animation-delay:0s" onclick="startAssignment('${a.id}')">
+        <div class="chapter-name">📄 ${a.name}</div>
+        <div class="chapter-stats">
+          <span>${a.sections.length} sections</span>
+          <span>${total} questions</span>
+          <span>${a.maxMarks} marks</span>
+          <span>${a.date}</span>
+        </div>
+        <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px;color:${score !== null ? (score >= 70 ? 'var(--success)' : score >= 40 ? '#FF8F00' : 'var(--error)') : 'var(--text-muted)'}">
+            ${score !== null ? `Score: ${score}%` : 'Not attempted yet'}
+          </div>
+          <button class="mode-btn mcq-btn" style="flex:none;padding:6px 14px">${score !== null ? 'Retake' : 'Start'} →</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function startAssignment(id) {
+  const a = ASSIGNMENTS.find(x => x.id === id);
+  if (!a) return;
+  assignmentState = { assignmentId: id, assignment: a };
+  const questions = a.questions.map((q, i) => ({ ...q, subject: 'assignment', chapter: id, chapterName: a.name }));
+  startMCQQuiz(questions, 'assignment-' + id, a.name);
+}
+
+function renderRankDetails() {
+  const container = document.getElementById('rankDetailsContent');
+  if (!container) return;
+  const currentXP = parseInt(state.xp) || 0;
+  const currentRank = getCurrentRank();
+  const currentIdx = RANKS.indexOf(currentRank);
+
+  let html = '<div style="max-width:600px;margin:0 auto">';
+  // Current rank card
+  html += `<div class="dash-card" style="text-align:center;margin-bottom:20px;border:2px solid var(--gold)">
+    <div style="font-size:48px;margin-bottom:8px">${currentRank.icon}</div>
+    <div style="font-family:'Playfair Display',serif;font-size:24px;color:var(--gold-bright);margin-bottom:4px">${currentRank.name}</div>
+    <div style="font-size:14px;color:var(--text-muted)">${currentXP} Total XP</div>
+  </div>`;
+
+  // Next rank progress
+  const next = getNextRank();
+  if (next) {
+    const needed = next.xp - currentRank.xp;
+    const earned = currentXP - currentRank.xp;
+    const pct = Math.min(Math.max((earned / needed) * 100, 0), 100);
+    html += `<div class="dash-card" style="margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-size:14px;color:var(--text-muted)">Next Rank</span>
+        <span style="font-size:18px">${next.icon} <strong>${next.name}</strong></span>
+      </div>
+      <div class="xp-bar-track" style="height:16px;margin-bottom:8px">
+        <div class="xp-bar-fill" style="width:${pct}%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px">
+        <span style="color:var(--text-muted)">${earned} XP earned</span>
+        <span style="color:var(--gold)">${needed - earned} XP remaining</span>
+      </div>
+    </div>`;
+  } else {
+    html += '<div class="dash-card" style="text-align:center;color:var(--gold-bright)"><div style="font-size:36px">👑</div>You have reached the maximum rank!</div>';
+  }
+
+  // Full rank list
+  html += '<div style="margin-top:24px"><h3 style="font-size:14px;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">All Ranks</h3>';
+  html += '<div style="display:flex;flex-direction:column;gap:6px">';
+  RANKS.forEach((r, i) => {
+    const unlocked = currentXP >= r.xp;
+    const isCurrent = i === currentIdx;
+    const isNext = next && i === currentIdx + 1;
+    const borderStyle = isCurrent ? 'border:2px solid var(--gold)' : isNext ? 'border:1px solid var(--gold-dim)' : 'border:1px solid rgba(255,255,255,0.06)';
+    const opacity = unlocked ? '1' : '0.4';
+    html += `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;${borderStyle};opacity:${opacity};background:${isCurrent ? 'rgba(218,165,32,0.1)' : 'transparent'}">
+      <span style="font-size:24px;flex-shrink:0">${unlocked ? r.icon : '🔒'}</span>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:${isCurrent ? '700' : '500'};color:${unlocked ? 'var(--parchment)' : 'var(--text-muted)'}">${r.name}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${r.xp.toLocaleString()} XP${isCurrent ? ' ← You are here' : ''}</div>
+      </div>
+      ${isCurrent ? '<span style="font-size:12px;color:var(--gold)">★ Current</span>' : ''}
+      ${isNext ? '<span style="font-size:12px;color:var(--gold-dim)">Next →</span>' : ''}
+    </div>`;
+  });
+  html += '</div></div></div>';
+  container.innerHTML = html;
 }
 
 // ===== NORMALIZE QUESTIONS =====
