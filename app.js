@@ -101,6 +101,46 @@ function saveState() {
   localStorage.setItem('jiven_progress', JSON.stringify(state));
 }
 
+// ===== D1 CLOUD SYNC FOR MISTAKES =====
+const D1_API = 'https://jiven-library-api.mailtoavoidspam1.workers.dev';
+let d1Synced = false;
+
+async function syncMistakeToD1(mistake) {
+  try {
+    await fetch(D1_API + '/api/mistakes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(mistake)
+    });
+  } catch(e) { /* silent - localStorage is primary */ }
+}
+
+async function syncAllMistakesToD1() {
+  if (d1Synced || !state.mistakes.length) return;
+  try {
+    const resp = await fetch(D1_API + '/api/mistakes/stats');
+    const data = await resp.json();
+    if (data.success && data.stats.total === 0 && state.mistakes.length > 0) {
+      await fetch(D1_API + '/api/mistakes/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mistakes: state.mistakes })
+      });
+    }
+    d1Synced = true;
+  } catch(e) { /* silent */ }
+}
+
+async function reviewMistakeD1(id, correct) {
+  try {
+    await fetch(D1_API + '/api/mistakes/review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, correct })
+    });
+  } catch(e) { /* silent */ }
+}
+
 // ===== HELPERS =====
 function getToday() {
   return new Date().toISOString().split('T')[0];
@@ -483,13 +523,28 @@ function selectOption(idx) {
     quizState.xpEarned += xp;
     showXPpopup(xp);
     spawnMiniConfetti();
+
+    // Update mastery for revision questions
+    if (q._isRevision && q._mistakeId) {
+      const localMistake = state.mistakes.find(m => m.id === q._mistakeId);
+      if (localMistake) {
+        localMistake.reviewCount = (localMistake.reviewCount || 0) + 1;
+        localMistake.timesCorrect = (localMistake.timesCorrect || 0) + 1;
+        saveState();
+      }
+      state.mistakesRevised = (state.mistakesRevised || 0) + 1;
+      // Try to update D1 if the mistake has a numeric DB id
+      if (typeof q._mistakeId === 'number' || String(q._mistakeId).match(/^\d+$/)) {
+        reviewMistakeD1(q._mistakeId, true);
+      }
+    }
   } else {
     btns[idx].classList.add('wrong');
     btns[q.answer].classList.add('correct');
     quizState.wrong++;
     quizState.fastStreak = 0;
     // Save mistake (PERMANENT - cannot be deleted)
-    state.mistakes.push({
+    const mistakeObj = {
       id: Date.now() + Math.random(),
       question: q.q,
       yourAnswer: q.options[idx],
@@ -505,7 +560,22 @@ function selectOption(idx) {
       _options: q.options.slice(),
       source: quizState.quizType || 'quiz',
       resolved: false
-    });
+    };
+    state.mistakes.push(mistakeObj);
+    syncMistakeToD1(mistakeObj);
+
+    // Also update mastery for wrong revision answers
+    if (q._isRevision && q._mistakeId) {
+      const localMistake = state.mistakes.find(m => m.id === q._mistakeId);
+      if (localMistake) {
+        localMistake.reviewCount = (localMistake.reviewCount || 0) + 1;
+        saveState();
+      }
+      state.mistakesRevised = (state.mistakesRevised || 0) + 1;
+      if (typeof q._mistakeId === 'number' || String(q._mistakeId).match(/^\d+$/)) {
+        reviewMistakeD1(q._mistakeId, false);
+      }
+    }
   }
 
   quizState.answers.push({ question: q.q, selected: idx, correct: q.answer, isCorrect, time: timeTaken });
@@ -907,8 +977,168 @@ function renderMistakes(filterSubject) {
   list.innerHTML = html;
 }
 
-// Mistakes are PERMANENT - resolve is disabled
-function resolveMistake(id) { /* No deleting mistakes! Use Revision Session instead. */ }
+// ===== REVISION SESSION =====
+function startRevisionSession() {
+  let mistakes = state.mistakes.slice();
+  mistakes.sort((a, b) => (a.reviewCount || 0) - (b.reviewCount || 0));
+  const toRevise = mistakes.slice(0, 20);
+
+  if (toRevise.length === 0) {
+    alert('No mistakes to revise! Complete some quizzes first.');
+    return;
+  }
+
+  quizState = {
+    questions: toRevise.map(m => ({
+      q: m.question,
+      options: (m._options && m._options.length >= 2) ? m._options : [m.yourAnswer, m.correctAnswer],
+      answer: (m._options && m._options.length >= 2) ? m._options.indexOf(m.correctAnswer) : 1,
+      explanation: m.explanation || '',
+      subject: m.subject,
+      chapter: m.chapter,
+      chapterName: m.chapterName || m.chapter,
+      _mistakeId: m.id,
+      _isRevision: true
+    })),
+    current: 0,
+    score: 0,
+    wrong: 0,
+    xpEarned: 0,
+    fastStreak: 0,
+    streak: 0,
+    answers: [],
+    startTime: Date.now(),
+    quizType: 'revision',
+    title: 'Revision Session'
+  };
+
+  document.getElementById('quizTitle').textContent = 'Revision Session';
+  navigate('quiz');
+  showQuestion();
+}
+
+// ===== MISTAKE PDF DOWNLOAD =====
+function generateMistakesPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const subNames = { maths:'Mathematics', science:'Science', english:'English', hindi:'Hindi', socialScience:'Social Science', sanskrit:'Sanskrit', assignment:'Assignment' };
+  const pageW = doc.internal.pageSize.getWidth();
+  let y = 20;
+
+  // Title
+  doc.setFontSize(20);
+  doc.setFont(undefined, 'bold');
+  doc.text('Jiven Library - Mistake Journal', pageW / 2, y, { align: 'center' });
+  y += 8;
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.text('Generated on ' + new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) + '  |  Total: ' + state.mistakes.length + ' mistakes', pageW / 2, y, { align: 'center' });
+  y += 12;
+
+  // Group by subject
+  const grouped = {};
+  state.mistakes.forEach(m => {
+    const sub = subNames[m.subject] || m.subject || 'Other';
+    if (!grouped[sub]) grouped[sub] = [];
+    grouped[sub].push(m);
+  });
+
+  Object.entries(grouped).forEach(([subject, mistakes]) => {
+    if (y > 260) { doc.addPage(); y = 20; }
+
+    // Subject header
+    doc.setFillColor(26, 15, 10);
+    doc.rect(14, y - 4, pageW - 28, 8, 'F');
+    doc.setFontSize(13);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(245, 230, 200);
+    doc.text(subject + ' (' + mistakes.length + ')', 16, y + 1);
+    doc.setTextColor(0, 0, 0);
+    y += 10;
+
+    mistakes.forEach((m, i) => {
+      if (y > 265) { doc.addPage(); y = 20; }
+
+      // Question number and text
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      const qNum = 'Q' + (i + 1) + '. ';
+      const qText = m.question || '';
+      const lines = doc.splitTextToSize(qNum + qText, pageW - 32);
+      lines.forEach(line => {
+        if (y > 275) { doc.addPage(); y = 20; }
+        doc.text(line, 16, y);
+        y += 4.5;
+      });
+      y += 1;
+
+      // Your answer (red)
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(200, 30, 30);
+      doc.setFontSize(8.5);
+      const yourLines = doc.splitTextToSize('Your answer: ' + (m.yourAnswer || 'N/A'), pageW - 40);
+      yourLines.forEach(line => {
+        if (y > 275) { doc.addPage(); y = 20; }
+        doc.text(line, 20, y);
+        y += 4;
+      });
+
+      // Correct answer (green)
+      doc.setTextColor(30, 130, 30);
+      const correctLines = doc.splitTextToSize('Correct: ' + (m.correctAnswer || 'N/A'), pageW - 40);
+      correctLines.forEach(line => {
+        if (y > 275) { doc.addPage(); y = 20; }
+        doc.text(line, 20, y);
+        y += 4;
+      });
+      doc.setTextColor(0, 0, 0);
+
+      // Mastery info
+      if (m.reviewCount > 0) {
+        const pct = Math.round((m.timesCorrect / m.reviewCount) * 100);
+        doc.setFontSize(7.5);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Revised ' + m.reviewCount + 'x  |  Correct ' + m.timesCorrect + '/' + m.reviewCount + '  |  Mastery: ' + pct + '%', 20, y);
+        doc.setTextColor(0, 0, 0);
+        y += 4;
+      }
+
+      // Explanation
+      if (m.explanation) {
+        doc.setFontSize(8);
+        doc.setTextColor(80, 80, 80);
+        const expLines = doc.splitTextToSize('Hint: ' + m.explanation, pageW - 40);
+        expLines.forEach(line => {
+          if (y > 275) { doc.addPage(); y = 20; }
+          doc.text(line, 20, y);
+          y += 4;
+        });
+        doc.setTextColor(0, 0, 0);
+      }
+
+      // Separator
+      y += 2;
+      if (y < 275) {
+        doc.setDrawColor(200, 200, 200);
+        doc.line(16, y, pageW - 16, y);
+      }
+      y += 6;
+    });
+
+    y += 4;
+  });
+
+  // Footer on each page
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Jiven Library - Mistake Journal  |  Page ' + p + ' of ' + totalPages, pageW / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+  }
+
+  doc.save('Jiven-Mistakes-' + new Date().toISOString().split('T')[0] + '.pdf');
+}
 
 // ===== DASHBOARD =====
 function renderDashboard() {
@@ -1492,6 +1722,7 @@ function init() {
   checkStreak();
   updateTopBar();
   renderBookshelf();
+  syncAllMistakesToD1(); // background sync to cloud
 }
 
 document.addEventListener('DOMContentLoaded', init);
