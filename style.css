@@ -86,21 +86,30 @@ body {
 }
 .xp-bar-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 .xp-bar-track {
-  flex: 1; height: 10px; background: rgba(255,255,255,0.08);
-  border-radius: 10px; overflow: hidden; position: relative;
+  flex: 1; height: 12px; background: rgba(255,255,255,0.08);
+  border-radius: 12px; overflow: hidden; position: relative;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
 }
 .xp-bar-fill {
   height: 100%; background: var(--xp-gradient);
-  border-radius: 10px; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  box-shadow: 0 0 8px rgba(255,215,0,0.4), 0 0 2px rgba(255,215,0,0.6);
 }
 .xp-bar-fill::after {
   content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-  animation: shimmer 2s infinite;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+  animation: barShine 2.5s ease-in-out infinite;
 }
-@keyframes shimmer {
+.xp-bar-fill::before {
+  content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 20px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6));
+  border-radius: 0 12px 12px 0;
+  filter: blur(2px);
+}
+@keyframes barShine {
   0% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
   100% { transform: translateX(100%); }
 }
 .xp-bar-text { font-size: 11px; color: var(--gold); font-weight: 600; white-space: nowrap; }
@@ -212,16 +221,25 @@ body {
   color: var(--parchment);
 }
 .book-progress {
-  font-size: 12px; color: var(--text-muted); margin-bottom: 10px;
+  font-size: 12px; color: var(--text-muted); margin-bottom: 8px;
 }
 .book-progress-bar {
-  height: 4px; background: rgba(255,255,255,0.1);
-  border-radius: 4px; overflow: hidden;
+  height: 6px; background: rgba(255,255,255,0.08);
+  border-radius: 6px; overflow: hidden; position: relative;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
 }
 .book-progress-fill {
-  height: 100%; border-radius: 4px;
+  height: 100%; border-radius: 6px;
   background: var(--book-color, var(--gold));
-  transition: width 0.6s ease;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--book-color, var(--gold)) 60%, white);
+}
+.book-progress-fill::after {
+  content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 12px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5));
+  border-radius: 0 6px 6px 0;
+  filter: blur(1px);
 }
 
 /* ===== SUBJECT PAGE ===== */
@@ -325,6 +343,14 @@ body {
   height: 100%; border-radius: 6px;
   background: var(--xp-gradient);
   transition: width 0.4s ease;
+  position: relative;
+  box-shadow: 0 0 8px rgba(255,215,0,0.3);
+}
+.quiz-progress-fill::after {
+  content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 16px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5));
+  filter: blur(2px);
+  border-radius: 0 6px 6px 0;
 }
 
 .question-card {
@@ -366,14 +392,16 @@ body {
 .option-btn:hover:not(.disabled) .option-letter { background: rgba(218,165,32,0.2); color: var(--gold); }
 
 .option-btn.correct {
-  background: rgba(76,175,80,0.15); border-color: var(--success);
-  animation: correctPulse 0.5s ease;
+  background: rgba(76,175,80,0.2); border-color: var(--success);
+  animation: correctPulse 0.6s ease;
+  box-shadow: 0 0 16px rgba(76,175,80,0.3);
 }
-.option-btn.correct .option-letter { background: var(--success); color: white; }
+.option-btn.correct .option-letter { background: var(--success); color: white; transform: scale(1.1); }
 
 .option-btn.wrong {
-  background: rgba(229,57,53,0.15); border-color: var(--error);
+  background: rgba(229,57,53,0.2); border-color: var(--error);
   animation: wrongShake 0.5s ease;
+  box-shadow: 0 0 16px rgba(229,57,53,0.2);
 }
 .option-btn.wrong .option-letter { background: var(--error); color: white; }
 
@@ -405,16 +433,18 @@ body {
 .xp-popup {
   position: fixed; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 28px; font-weight: 800;
+  font-size: 32px; font-weight: 800;
   color: var(--gold-bright);
-  text-shadow: 0 0 20px rgba(255,215,0,0.5);
+  text-shadow: 0 0 20px rgba(255,215,0,0.6), 0 0 40px rgba(255,215,0,0.3);
   pointer-events: none; z-index: 200;
-  animation: xpFloat 1.2s ease forwards;
+  animation: xpFloat 1.2s cubic-bezier(0.2, 0, 0, 1) forwards;
+  font-family: 'Playfair Display', serif;
 }
 @keyframes xpFloat {
-  0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
-  30% { opacity: 1; transform: translate(-50%, -70%) scale(1.2); }
-  100% { opacity: 0; transform: translate(-50%, -150%) scale(0.8); }
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(0.3); }
+  20% { opacity: 1; transform: translate(-50%, -60%) scale(1.3); }
+  40% { transform: translate(-50%, -80%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -180%) scale(0.7); }
 }
 
 /* ===== WRITTEN ANSWER PAGE ===== */
@@ -613,15 +643,15 @@ body {
   display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;
 }
 .mistake-tab {
-  padding: 8px 16px; border-radius: 20px;
+  padding: 8px 18px; border-radius: 24px;
   background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
   color: var(--text-muted); cursor: pointer;
   font-size: 13px; font-weight: 500;
-  transition: var(--transition);
+  transition: all 0.3s ease;
 }
-.mistake-tab:hover { background: rgba(218,165,32,0.1); color: var(--gold); }
-.mistake-tab.active { background: rgba(218,165,32,0.15); border-color: var(--gold); color: var(--gold); }
+.mistake-tab:hover { background: rgba(218,165,32,0.12); border-color: rgba(218,165,32,0.3); color: var(--gold); transform: translateY(-1px); }
+.mistake-tab.active { background: rgba(218,165,32,0.2); border-color: var(--gold); color: var(--gold-bright); box-shadow: 0 0 12px rgba(218,165,32,0.15); }
 .mistake-tab .count {
   background: rgba(229,57,53,0.3); color: #FF8A80;
   padding: 1px 8px; border-radius: 10px; margin-left: 6px;
@@ -837,7 +867,8 @@ body {
   }
   .xp-bar-container { gap: 6px; }
   .xp-bar-label { font-size: 10px; }
-  .xp-bar-track { height: 8px; }
+  .xp-bar-track { height: 10px; }
+  .xp-bar-fill::before { width: 14px; }
   .xp-bar-text { font-size: 10px; }
 
   /* Mobile rank badge */

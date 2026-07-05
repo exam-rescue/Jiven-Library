@@ -226,6 +226,7 @@ function addXP(amount, reason) {
 }
 
 function showXPpopup(amount) {
+  SFX.xp();
   const el = document.createElement('div');
   el.className = 'xp-popup';
   el.textContent = `+${amount} XP`;
@@ -248,6 +249,7 @@ function showRankUp(rank) {
   `;
   document.body.appendChild(overlay);
   spawnConfetti();
+  SFX.rankUp();
 }
 
 function spawnConfetti() {
@@ -478,6 +480,7 @@ function startMCQQuiz(questions, contextId, contextName) {
     startTime: Date.now(),
     questionStartTime: Date.now(),
     answers: [],
+    streak: 0,
     isDaily: contextId === 'daily',
     fastStreak: 0
   };
@@ -521,13 +524,16 @@ function selectOption(idx) {
   if (isCorrect) {
     btns[idx].classList.add('correct');
     quizState.correct++;
+    quizState.streak = (quizState.streak || 0) + 1;
     let xp = 10;
     if (timeTaken < 10) { xp = 15; quizState.fastStreak++; }
     else { quizState.fastStreak = 0; }
-    xp += Math.min(quizState.streak * 2, 20);
+    xp += Math.min((quizState.streak || 0) * 2, 20);
     quizState.xpEarned += xp;
     showXPpopup(xp);
     spawnMiniConfetti();
+    SFX.correct();
+    if (quizState.streak >= 3) SFX.streak();
 
     // Update mastery for revision questions
     if (q._isRevision && q._mistakeId) {
@@ -547,7 +553,9 @@ function selectOption(idx) {
     btns[idx].classList.add('wrong');
     btns[q.answer].classList.add('correct');
     quizState.wrong++;
+    quizState.streak = 0;
     quizState.fastStreak = 0;
+    SFX.wrong();
     // Save mistake (PERMANENT - cannot be deleted)
     const mistakeObj = {
       id: Date.now() + Math.random(),
@@ -1723,23 +1731,106 @@ function normalizeQuestions() {
   });
 }
 
+// ===== AUDIO ENGINE =====
+const SFX = {
+  _ctx: null,
+  _getCtx() {
+    if (!this._ctx) this._ctx = new (window.AudioContext || window.webkitAudioContext)();
+    return this._ctx;
+  },
+  _play(freq, type, dur, vol) {
+    try {
+      const ctx = this._getCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(vol || 0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + dur);
+    } catch(e) {}
+  },
+  correct() { this._play(523, 'sine', 0.15, 0.12); setTimeout(() => this._play(659, 'sine', 0.15, 0.12), 80); setTimeout(() => this._play(784, 'sine', 0.3, 0.15), 160); },
+  wrong() { this._play(200, 'sawtooth', 0.25, 0.08); setTimeout(() => this._play(150, 'sawtooth', 0.3, 0.06), 150); },
+  xp() { this._play(880, 'sine', 0.1, 0.06); },
+  rankUp() { [523,659,784,1047].forEach((f,i) => setTimeout(() => this._play(f, 'sine', 0.3, 0.12), i*120)); },
+  click() { this._play(600, 'sine', 0.05, 0.04); },
+  streak() { this._play(784, 'triangle', 0.12, 0.1); setTimeout(() => this._play(988, 'triangle', 0.12, 0.1), 60); setTimeout(() => this._play(1175, 'triangle', 0.2, 0.12), 120); },
+  login() { this._play(440, 'sine', 0.1, 0.08); setTimeout(() => this._play(554, 'sine', 0.1, 0.08), 80); setTimeout(() => this._play(659, 'sine', 0.2, 0.1), 160); }
+};
+
 // ===== LOGIN SYSTEM =====
 const CREDENTIALS = { 'jiven': '1111' };
 const SESSION_DURATION = 2 * 60 * 60 * 1000; // 2 hours
 
+function showSignup() {
+  const u = document.getElementById('loginUsername');
+  const p = document.getElementById('loginPassword');
+  u.value = '';
+  p.value = '';
+  u.placeholder = 'Choose a username';
+  p.placeholder = 'Choose a password';
+  u.focus();
+  u.onkeydown = (e) => { if (e.key === 'Enter') { p.focus(); } };
+  // Temporarily change button text
+  const btns = u.parentElement.parentElement.querySelectorAll('button');
+  if (btns[0]) { btns[0].textContent = 'Create & Start'; btns[0].onclick = handleSignup; }
+}
+
+function handleSignup() {
+  const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+  const password = document.getElementById('loginPassword').value.trim();
+  const errorEl = document.getElementById('loginError');
+
+  if (!username || username.length < 2) {
+    errorEl.textContent = 'Username must be at least 2 characters.';
+    errorEl.style.display = 'block'; return;
+  }
+  if (!password || password.length < 3) {
+    errorEl.textContent = 'Password must be at least 3 characters.';
+    errorEl.style.display = 'block'; return;
+  }
+  if (CREDENTIALS[username]) {
+    errorEl.textContent = 'Username already taken. Try another or sign in.';
+    errorEl.style.display = 'block'; return;
+  }
+
+  // Save the new credential
+  CREDENTIALS[username] = password;
+  localStorage.setItem('jiven_credentials', JSON.stringify(CREDENTIALS));
+
+  // Auto-login
+  currentUser = username;
+  localStorage.setItem('jiven_session', JSON.stringify({ user: username, timestamp: Date.now() }));
+  document.getElementById('loginScreen').style.display = 'none';
+  errorEl.style.display = 'none';
+  state = defaultState(); // Fresh start for new users
+  saveState();
+  SFX.login();
+  init();
+}
+
 function checkSession() {
+  // Load any saved credentials from localStorage
+  try {
+    const saved = JSON.parse(localStorage.getItem('jiven_credentials'));
+    if (saved) Object.assign(CREDENTIALS, saved);
+  } catch(e) {}
+
+  // Clean Jiven's old data so he starts fresh
+  try {
+    localStorage.removeItem('jiven_progress');
+    localStorage.removeItem('jiven_jiven_progress');
+  } catch(e) {}
+
   try {
     const session = JSON.parse(localStorage.getItem('jiven_session'));
     if (session && session.user && (Date.now() - session.timestamp) < SESSION_DURATION) {
       currentUser = session.user;
       document.getElementById('loginScreen').style.display = 'none';
-      // Migrate old data for Jiven
-      if (currentUser === 'jiven') {
-        const oldData = localStorage.getItem('jiven_progress');
-        if (oldData && !localStorage.getItem(getStorageKey())) {
-          localStorage.setItem(getStorageKey(), oldData);
-        }
-      }
       state = loadState();
       return true;
     }
@@ -1766,14 +1857,8 @@ function handleLogin() {
     localStorage.setItem('jiven_session', JSON.stringify({ user: username, timestamp: Date.now() }));
     document.getElementById('loginScreen').style.display = 'none';
     errorEl.style.display = 'none';
-    // Migrate old data
-    if (currentUser === 'jiven') {
-      const oldData = localStorage.getItem('jiven_progress');
-      if (oldData && !localStorage.getItem(getStorageKey())) {
-        localStorage.setItem(getStorageKey(), oldData);
-      }
-    }
     state = loadState();
+    SFX.login();
     init();
   } else {
     errorEl.textContent = 'Wrong username or password. Try again!';
