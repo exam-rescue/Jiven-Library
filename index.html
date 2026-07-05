@@ -11,6 +11,26 @@
 </head>
 <body>
 
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen" style="position:fixed; inset:0; z-index:9999; background:linear-gradient(135deg, #1a0f0a 0%, #2C1810 50%, #1e120b 100%); display:flex; align-items:center; justify-content:center;">
+    <div style="background:rgba(44,24,16,0.9); border:2px solid rgba(218,165,32,0.3); border-radius:20px; padding:40px 32px; max-width:380px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      <div style="font-size:64px; margin-bottom:12px;">📚</div>
+      <h1 style="font-family:'Playfair Display',serif; font-size:28px; background:linear-gradient(135deg,#FFD700,#DAA520); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:6px;">Jiven Library</h1>
+      <p style="color:#a89080; font-size:13px; margin-bottom:28px;">Your personal study companion for Class 6 CBSE</p>
+      <div id="loginError" style="display:none; color:#E53935; font-size:13px; margin-bottom:12px; background:rgba(229,57,53,0.1); padding:8px 12px; border-radius:8px;"></div>
+      <div style="text-align:left; margin-bottom:16px;">
+        <label style="font-size:12px; color:#a89080; display:block; margin-bottom:6px;">Username</label>
+        <input type="text" id="loginUsername" autocomplete="off" placeholder="Enter your username" style="width:100%; padding:12px 16px; background:rgba(255,255,255,0.06); border:1px solid rgba(218,165,32,0.2); border-radius:10px; color:#F5E6C8; font-size:15px; outline:none; font-family:'Inter',sans-serif; transition:border-color 0.3s;" onfocus="this.style.borderColor='rgba(218,165,32,0.6)'" onblur="this.style.borderColor='rgba(218,165,32,0.2)'">
+      </div>
+      <div style="text-align:left; margin-bottom:24px;">
+        <label style="font-size:12px; color:#a89080; display:block; margin-bottom:6px;">Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter your password" style="width:100%; padding:12px 16px; background:rgba(255,255,255,0.06); border:1px solid rgba(218,165,32,0.2); border-radius:10px; color:#F5E6C8; font-size:15px; outline:none; font-family:'Inter',sans-serif; transition:border-color 0.3s;" onfocus="this.style.borderColor='rgba(218,165,32,0.6)'" onblur="this.style.borderColor='rgba(218,165,32,0.2)'" onkeydown="if(event.key==='Enter')handleLogin()">
+      </div>
+      <button onclick="handleLogin()" style="width:100%; padding:14px; background:linear-gradient(135deg,#DAA520,#FF8F00); border:none; border-radius:12px; color:#1a0f0a; font-size:16px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; transition:transform 0.2s, box-shadow 0.2s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'" onmouseleave="this.style.transform='scale(1)'">Sign In</button>
+      <p style="color:#a89080; font-size:11px; margin-top:16px; opacity:0.7;">Session lasts 2 hours</p>
+    </div>
+  </div>
+
   <!-- TOP BAR -->
   <div class="top-bar">
     <div class="top-bar-left">
@@ -38,6 +58,7 @@
       <button class="nav-btn" onclick="navigate('assignments')" title="Assignments">📋</button>
       <button class="nav-btn" onclick="navigate('mistakes')" title="Mistakes">📒</button>
       <button class="nav-btn" onclick="navigate('dashboard')" title="Dashboard">📊</button>
+      <button class="nav-btn" onclick="handleLogout()" title="Logout" style="font-size:16px; opacity:0.7;">⏏</button>
     </div>
   </div>
 

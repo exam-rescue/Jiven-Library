@@ -57,9 +57,10 @@ const ACHIEVEMENTS = [
 const SUBJECT_KEYS = ['maths', 'science', 'english', 'hindi', 'socialScience', 'sanskrit'];
 
 // ===== STATE =====
-let state = loadState();
+let state = defaultState();
 let quizState = null;
 let writtenState = null;
+let currentUser = null;
 
 function defaultState() {
   return {
@@ -86,9 +87,13 @@ function defaultState() {
   };
 }
 
+function getStorageKey() {
+  return 'jiven_' + (currentUser || '__anon__') + '_progress';
+}
+
 function loadState() {
   try {
-    const saved = localStorage.getItem('jiven_progress');
+    const saved = localStorage.getItem(getStorageKey());
     if (saved) {
       const s = JSON.parse(saved);
       return { ...defaultState(), ...s };
@@ -98,7 +103,7 @@ function loadState() {
 }
 
 function saveState() {
-  localStorage.setItem('jiven_progress', JSON.stringify(state));
+  localStorage.setItem(getStorageKey(), JSON.stringify(state));
 }
 
 // ===== D1 CLOUD SYNC FOR MISTAKES =====
@@ -638,18 +643,20 @@ function finishMCQQuiz() {
   state.totalAnswered += total;
   state.totalCorrect += quizState.correct;
 
-  // Update chapter history
-  quizState.questions.forEach(q => {
-    if (!q.subject || !q.chapter) return;
-    if (!state.chapterHistory[q.subject]) state.chapterHistory[q.subject] = {};
-    if (!state.chapterHistory[q.subject][q.chapter]) {
-      state.chapterHistory[q.subject][q.chapter] = { total: 0, correct: 0, mcqDone: false, writtenDone: false };
-    }
-    const ans = quizState.answers.find(a => a.question === q.q);
-    state.chapterHistory[q.subject][q.chapter].total++;
-    if (ans && ans.isCorrect) state.chapterHistory[q.subject][q.chapter].correct++;
-    state.chapterHistory[q.subject][q.chapter].mcqDone = true;
-  });
+  // Update chapter history (skip for daily/mixed challenges - they shouldn't fill subject bars)
+  if (!quizState.isDaily && !quizState.isRevision) {
+    quizState.questions.forEach(q => {
+      if (!q.subject || !q.chapter) return;
+      if (!state.chapterHistory[q.subject]) state.chapterHistory[q.subject] = {};
+      if (!state.chapterHistory[q.subject][q.chapter]) {
+        state.chapterHistory[q.subject][q.chapter] = { total: 0, correct: 0, mcqDone: false, writtenDone: false };
+      }
+      const ans = quizState.answers.find(a => a.question === q.q);
+      state.chapterHistory[q.subject][q.chapter].total++;
+      if (ans && ans.isCorrect) state.chapterHistory[q.subject][q.chapter].correct++;
+      state.chapterHistory[q.subject][q.chapter].mcqDone = true;
+    });
+  }
 
   // Activity log
   state.activityLog[getToday()] = state.activityLog[getToday()] || { questions: 0, correct: 0, xp: 0, time: 0 };
@@ -1716,14 +1723,94 @@ function normalizeQuestions() {
   });
 }
 
+// ===== LOGIN SYSTEM =====
+const CREDENTIALS = { 'jiven': '1111' };
+const SESSION_DURATION = 2 * 60 * 60 * 1000; // 2 hours
+
+function checkSession() {
+  try {
+    const session = JSON.parse(localStorage.getItem('jiven_session'));
+    if (session && session.user && (Date.now() - session.timestamp) < SESSION_DURATION) {
+      currentUser = session.user;
+      document.getElementById('loginScreen').style.display = 'none';
+      // Migrate old data for Jiven
+      if (currentUser === 'jiven') {
+        const oldData = localStorage.getItem('jiven_progress');
+        if (oldData && !localStorage.getItem(getStorageKey())) {
+          localStorage.setItem(getStorageKey(), oldData);
+        }
+      }
+      state = loadState();
+      return true;
+    }
+  } catch(e) {}
+  localStorage.removeItem('jiven_session');
+  currentUser = null;
+  document.getElementById('loginScreen').style.display = 'flex';
+  return false;
+}
+
+function handleLogin() {
+  const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+  const password = document.getElementById('loginPassword').value.trim();
+  const errorEl = document.getElementById('loginError');
+
+  if (!username || !password) {
+    errorEl.textContent = 'Please enter both username and password.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  if (CREDENTIALS[username] && CREDENTIALS[username] === password) {
+    currentUser = username;
+    localStorage.setItem('jiven_session', JSON.stringify({ user: username, timestamp: Date.now() }));
+    document.getElementById('loginScreen').style.display = 'none';
+    errorEl.style.display = 'none';
+    // Migrate old data
+    if (currentUser === 'jiven') {
+      const oldData = localStorage.getItem('jiven_progress');
+      if (oldData && !localStorage.getItem(getStorageKey())) {
+        localStorage.setItem(getStorageKey(), oldData);
+      }
+    }
+    state = loadState();
+    init();
+  } else {
+    errorEl.textContent = 'Wrong username or password. Try again!';
+    errorEl.style.display = 'block';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginPassword').focus();
+  }
+}
+
+function handleLogout() {
+  if (!confirm('Sign out? Your progress is saved.')) return;
+  localStorage.removeItem('jiven_session');
+  currentUser = null;
+  state = defaultState();
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginUsername').value = '';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginError').style.display = 'none';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+}
+
 // ===== INIT =====
 function init() {
+  if (!currentUser) return;
   normalizeQuestions();
   checkStreak();
   updateTopBar();
   renderBookshelf();
-  syncAllMistakesToD1(); // background sync to cloud
+  syncAllMistakesToD1();
+  const welcomeEl = document.querySelector('.bookshelf-header h1');
+  if (welcomeEl) welcomeEl.textContent = 'Welcome back, ' + currentUser.charAt(0).toUpperCase() + currentUser.slice(1) + '! \uD83D\uDCD6';
 }
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+  if (checkSession()) {
+    init();
+  }
+});
+
 window.QUESTIONS = window.QUESTIONS || {};
