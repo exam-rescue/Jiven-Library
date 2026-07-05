@@ -162,6 +162,35 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(getStorageKey(), JSON.stringify(state));
+  // Sync progress to cloud (debounced)
+  if (currentUser) {
+    clearTimeout(saveState._syncTimer);
+    saveState._syncTimer = setTimeout(() => syncProgressToCloud(), 2000);
+  }
+}
+
+async function syncProgressToCloud() {
+  if (!currentUser) return;
+  try {
+    await fetch(D1_API + '/api/progress/' + encodeURIComponent(currentUser), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: state })
+    });
+  } catch(e) { /* silent */ }
+}
+
+async function loadProgressFromCloud(username) {
+  try {
+    const resp = await fetch(D1_API + '/api/progress/' + encodeURIComponent(username));
+    const result = await resp.json();
+    if (result.success && result.data) {
+      const cloudState = JSON.parse(result.data);
+      // Merge cloud data with defaults (in case new fields were added)
+      return { ...defaultState(), ...cloudState, rankVersion: RANK_VERSION };
+    }
+  } catch(e) { /* silent */ }
+  return null;
 }
 
 // ===== D1 CLOUD SYNC FOR MISTAKES =====
@@ -1936,7 +1965,7 @@ function handleSignup() {
   init();
 }
 
-function checkSession() {
+async function checkSession() {
   // Load any saved credentials from localStorage
   try {
     const saved = JSON.parse(localStorage.getItem('jiven_credentials'));
@@ -1953,8 +1982,15 @@ function checkSession() {
     const session = JSON.parse(localStorage.getItem('jiven_session'));
     if (session && session.user && (Date.now() - session.timestamp) < SESSION_DURATION) {
       currentUser = session.user;
+      // Try cloud first, fall back to local
+      const cloudState = await loadProgressFromCloud(currentUser);
+      if (cloudState) {
+        state = cloudState;
+        saveState(); // also save locally as cache
+      } else {
+        state = loadState();
+      }
       document.getElementById('loginScreen').style.display = 'none';
-      state = loadState();
       return true;
     }
   } catch(e) {}
@@ -1964,7 +2000,7 @@ function checkSession() {
   return false;
 }
 
-function handleLogin() {
+async function handleLogin() {
   const username = document.getElementById('loginUsername').value.trim().toLowerCase();
   const password = document.getElementById('loginPassword').value.trim();
   const errorEl = document.getElementById('loginError');
@@ -1980,7 +2016,14 @@ function handleLogin() {
     localStorage.setItem('jiven_session', JSON.stringify({ user: username, timestamp: Date.now() }));
     document.getElementById('loginScreen').style.display = 'none';
     errorEl.style.display = 'none';
-    state = loadState();
+    // Load from cloud first, then local fallback
+    const cloudState = await loadProgressFromCloud(username);
+    if (cloudState) {
+      state = cloudState;
+      saveState();
+    } else {
+      state = loadState();
+    }
     SFX.login();
     init();
   } else {
@@ -1991,8 +2034,11 @@ function handleLogin() {
   }
 }
 
-function handleLogout() {
+async function handleLogout() {
   if (!confirm('Sign out? Your progress is saved.')) return;
+  // Force sync to cloud before logout
+  clearTimeout(saveState._syncTimer);
+  await syncProgressToCloud();
   localStorage.removeItem('jiven_session');
   currentUser = null;
   state = defaultState();
@@ -2015,8 +2061,8 @@ function init() {
   if (welcomeEl) welcomeEl.textContent = 'Welcome back, ' + currentUser.charAt(0).toUpperCase() + currentUser.slice(1) + '! \uD83D\uDCD6';
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  if (checkSession()) {
+document.addEventListener('DOMContentLoaded', async () => {
+  if (await checkSession()) {
     init();
   }
 });
