@@ -3,33 +3,83 @@
    ============================================ */
 
 // ===== RANK SYSTEM =====
-const RANKS = [
-  { name: "Page Turner", icon: "📄", xp: 0 },
-  { name: "Curious Mind", icon: "🤔", xp: 300 },
-  { name: "Bookworm", icon: "🐛", xp: 800 },
-  { name: "Knowledge Sprout", icon: "🌱", xp: 1500 },
-  { name: "Quick Learner", icon: "⚡", xp: 2500 },
-  { name: "Chapter Explorer", icon: "🗺️", xp: 3800 },
-  { name: "Subject Navigator", icon: "🧭", xp: 5500 },
-  { name: "Quiz Apprentice", icon: "✏️", xp: 7500 },
-  { name: "Practice Regular", icon: "📅", xp: 10000 },
-  { name: "Mind Sharpener", icon: "🧠", xp: 13000 },
-  { name: "Revision Rider", icon: "🔄", xp: 16500 },
-  { name: "Streak Warrior", icon: "🔥", xp: 20500 },
-  { name: "Half Scholar", icon: "📚", xp: 25000 },
-  { name: "Topic Titan", icon: "🏛️", xp: 30000 },
-  { name: "Science Star", icon: "⭐", xp: 36000 },
-  { name: "Math Wizard", icon: "🔢", xp: 42500 },
-  { name: "Language Master", icon: "🗣️", xp: 49500 },
-  { name: "Mistake Crusher", icon: "💪", xp: 57000 },
-  { name: "Daily Champion", icon: "🏆", xp: 65000 },
-  { name: "Knowledge Vault", icon: "🏰", xp: 73500 },
-  { name: "NCERT Explorer", icon: "📖", xp: 82500 },
-  { name: "Academic Knight", icon: "⚔️", xp: 92000 },
-  { name: "Wisdom Keeper", icon: "🦉", xp: 102000 },
-  { name: "Junior Scholar", icon: "🎓", xp: 112500 },
-  { name: "Grand Master", icon: "👑", xp: 125000 }
+// 25 Ranks, 10 sub-ranks each = 250 total levels
+// Designed for ~6 months of hard work to reach Grandmaster
+
+const RANK_TIERS = [
+  { name: "Bronze", color: "#CD7F32", bg: "rgba(205,127,50,0.15)", border: "rgba(205,127,50,0.4)" },
+  { name: "Silver", color: "#C0C0C0", bg: "rgba(192,192,192,0.15)", border: "rgba(192,192,192,0.4)" },
+  { name: "Gold", color: "#FFD700", bg: "rgba(255,215,0,0.15)", border: "rgba(255,215,0,0.4)" },
+  { name: "Platinum", color: "#E5E4E2", bg: "rgba(229,228,226,0.15)", border: "rgba(229,228,226,0.4)" },
+  { name: "Diamond", color: "#B9F2FF", bg: "rgba(185,242,255,0.15)", border: "rgba(185,242,255,0.4)" }
 ];
+
+const RANKS = [
+  // Tier 1: Bronze (Ranks 1-5)
+  { name: "Seedling", icon: "🌱", tier: 0 },
+  { name: "Sprout", icon: "🌿", tier: 0 },
+  { name: "Learner", icon: "📗", tier: 0 },
+  { name: "Reader", icon: "📖", tier: 0 },
+  { name: "Page", icon: "📄", tier: 0 },
+  // Tier 2: Silver (Ranks 6-10)
+  { name: "Scholar", icon: "🎓", tier: 1 },
+  { name: "Thinker", icon: "💭", tier: 1 },
+  { name: "Adept", icon: "📋", tier: 1 },
+  { name: "Clerk", icon: "📜", tier: 1 },
+  { name: "Scribe", icon: "✍️", tier: 1 },
+  // Tier 3: Gold (Ranks 11-15)
+  { name: "Knight", icon: "🛡️", tier: 2 },
+  { name: "Warrior", icon: "⚔️", tier: 2 },
+  { name: "Champion", icon: "🏆", tier: 2 },
+  { name: "Hero", icon: "🦸", tier: 2 },
+  { name: "Sage", icon: "🧙", tier: 2 },
+  // Tier 4: Platinum (Ranks 16-20)
+  { name: "Master", icon: "🔮", tier: 3 },
+  { name: "Expert", icon: "🧠", tier: 3 },
+  { name: "Virtuoso", icon: "🎼", tier: 3 },
+  { name: "Maestro", icon: "🎻", tier: 3 },
+  { name: "Prodigy", icon: "✨", tier: 3 },
+  // Tier 5: Diamond (Ranks 21-25)
+  { name: "Legend", icon: "🌟", tier: 4 },
+  { name: "Mythic", icon: "🌌", tier: 4 },
+  { name: "Transcendent", icon: "⚡", tier: 4 },
+  { name: "Immortal", icon: "💫", tier: 4 },
+  { name: "Grandmaster", icon: "👑", tier: 4 }
+];
+
+const SUB_RANKS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+const SUB_RANK_LABELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+
+// Generate XP table: 251 entries (level 0 to 250)
+// Gap per level starts at ~8 XP and grows to ~98 XP
+// Total XP at max: ~13,250
+function generateXPTable() {
+  const table = [0];
+  let current = 0;
+  for (let i = 1; i <= 250; i++) {
+    current += Math.round(8 + i * 0.36);
+    table.push(current);
+  }
+  return table;
+}
+const XP_TABLE = generateXPTable();
+
+function getLevelXP(level) {
+  if (level < 0) return 0;
+  if (level > 250) return XP_TABLE[250];
+  return XP_TABLE[level];
+}
+
+function getRankAndSub(xp) {
+  const x = parseInt(xp) || 0;
+  let level = 0;
+  for (let i = 250; i >= 1; i--) {
+    if (x >= XP_TABLE[i]) { level = i; break; }
+  }
+  const rankIdx = Math.floor(level / 10);
+  const subIdx = level % 10;
+  return { rankIdx, subIdx, level, rank: RANKS[rankIdx], tier: RANK_TIERS[RANKS[rankIdx].tier] };
+}
 
 const ACHIEVEMENTS = [
   { id: "first_steps", name: "First Steps", icon: "👣", desc: "Answer your first question", check: p => p.totalAnswered >= 1 },
@@ -51,7 +101,7 @@ const ACHIEVEMENTS = [
   { id: "lang_lover", name: "Language Lover", icon: "💬", desc: "90%+ in English & Hindi", check: p => getSubjectAccuracy('english') >= 90 && getSubjectAccuracy('hindi') >= 90 },
   { id: "social_scholar", name: "Social Scholar", icon: "🌍", desc: "90%+ accuracy in Social Science", check: p => getSubjectAccuracy('socialScience') >= 90 },
   { id: "streak_saver", name: "Streak Saver", icon: "🧊", desc: "Use a streak freeze", check: p => p.streakFreezesUsed >= 1 },
-  { id: "grand_master", name: "Grand Master", icon: "👑", desc: "Reach the Grand Master rank", check: p => p.xp >= 125000 }
+  { id: "grand_master", name: "Grandmaster", icon: "👑", desc: "Reach Grandmaster rank", check: p => (parseInt(p.xp)||0) >= XP_TABLE[250] }
 ];
 
 const SUBJECT_KEYS = ['maths', 'science', 'english', 'hindi', 'socialScience', 'sanskrit'];
@@ -201,27 +251,43 @@ function navigate(page, params) {
 
 // ===== XP & RANK =====
 function getCurrentRank() {
-  let rank = RANKS[0];
-  for (let i = RANKS.length - 1; i >= 0; i--) {
-    if (state.xp >= RANKS[i].xp) { rank = RANKS[i]; break; }
-  }
+  const { rank } = getRankAndSub(state.xp);
   return rank;
 }
 
-function getNextRank() {
-  const current = getCurrentRank();
-  const idx = RANKS.indexOf(current);
-  return idx < RANKS.length - 1 ? RANKS[idx + 1] : null;
+function getNextSubRank(xp) {
+  const x = parseInt(xp) || 0;
+  const { level } = getRankAndSub(x);
+  if (level >= 250) return null;
+  const nextLevel = level + 1;
+  const nextRankIdx = Math.floor(nextLevel / 10);
+  const nextSubIdx = nextLevel % 10;
+  return {
+    rank: RANKS[nextRankIdx],
+    sub: SUB_RANKS[nextSubIdx],
+    subNum: nextSubIdx + 1,
+    isNewRank: nextSubIdx === 0,
+    xpNeeded: getLevelXP(nextLevel),
+    xpCurrent: x - getLevelXP(level),
+    xpGap: getLevelXP(nextLevel) - getLevelXP(level),
+    progress: ((x - getLevelXP(level)) / (getLevelXP(nextLevel) - getLevelXP(level))) * 100
+  };
 }
 
 function addXP(amount, reason) {
-  const oldRank = getCurrentRank();
+  const oldInfo = getRankAndSub(state.xp);
   state.xp = (parseInt(state.xp) || 0) + (parseInt(amount) || 0);
-  const newRank = getCurrentRank();
+  const newInfo = getRankAndSub(state.xp);
   updateTopBar();
   saveState();
-  if (newRank.xp > oldRank.xp) {
-    setTimeout(() => showRankUp(newRank), 800);
+  if (newInfo.level > oldInfo.level) {
+    setTimeout(() => {
+      if (newInfo.rankIdx > oldInfo.rankIdx) {
+        showRankUp(newInfo.rank, true);
+      } else if (newInfo.subIdx > oldInfo.subIdx) {
+        showSubRankUp(newInfo.rank, newInfo.subIdx, newInfo.tier);
+      }
+    }, 600);
   }
 }
 
@@ -234,17 +300,37 @@ function showXPpopup(amount) {
   setTimeout(() => el.remove(), 1200);
 }
 
-function showRankUp(rank) {
+function showSubRankUp(rank, subIdx, tier) {
+  SFX.streak();
   const overlay = document.createElement('div');
   overlay.className = 'rankup-overlay';
   overlay.id = 'rankupOverlay';
   overlay.innerHTML = `
-    <div class="confetti-container" id="confettiContainer"></div>
-    <div class="rankup-content">
+    <div class="rankup-content" style="border-color:${tier.color}">
       <div class="rankup-icon">${rank.icon}</div>
-      <div class="rankup-label">Rank Up!</div>
+      <div class="rankup-label" style="color:${tier.color}">Sub-Rank Up!</div>
+      <div class="rankup-name">${rank.name} ${SUB_RANKS[subIdx]}</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:4px">${SUB_RANK_LABELS[subIdx]}/10</div>
+      <button class="rankup-dismiss" onclick="closeRankUp()" style="background:${tier.color}">Nice! 💪</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  spawnMiniConfetti();
+}
+
+function showRankUp(rank, isMajor) {
+  const overlay = document.createElement('div');
+  overlay.className = 'rankup-overlay';
+  overlay.id = 'rankupOverlay';
+  const tier = RANK_TIERS[rank.tier];
+  overlay.innerHTML = `
+    <div class="confetti-container" id="confettiContainer"></div>
+    <div class="rankup-content" style="border-color:${tier.color};box-shadow:0 0 60px ${tier.bg}>
+      <div class="rankup-label" style="color:${tier.color}">${tier.name} Rank!</div>
+      <div class="rankup-icon" style="font-size:72px">${rank.icon}</div>
       <div class="rankup-name">${rank.name}</div>
-      <button class="rankup-dismiss" onclick="closeRankUp()">Amazing! 🎉</button>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Rank ${RANKS.indexOf(rank) + 1} of 25</div>
+      <button class="rankup-dismiss" onclick="closeRankUp()" style="background:linear-gradient(135deg,${tier.color},var(--gold))">Amazing! 🎉</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -296,31 +382,34 @@ function checkStreak() {
   state.lastLogin = today;
   state.activityLog[today] = state.activityLog[today] || { questions: 0, correct: 0, xp: 0, time: 0 };
   if (state.streak > state.bestStreak) state.bestStreak = state.streak;
-  addXP(5, 'daily_login');
+  addXP(2, 'daily_login');
   saveState();
 }
 
 // ===== TOP BAR =====
 function updateTopBar() {
-  const rank = getCurrentRank();
-  const next = getNextRank();
+  const { rank, subIdx, tier } = getRankAndSub(state.xp);
+  const next = getNextSubRank(state.xp);
   document.getElementById('rankIcon').textContent = rank.icon;
-  document.getElementById('rankName').textContent = rank.name;
+  document.getElementById('rankName').textContent = rank.name + ' ' + SUB_RANKS[subIdx];
   document.getElementById('rankName').onclick = () => navigate('ranks');
   document.getElementById('rankIcon').onclick = () => navigate('ranks');
   document.getElementById('rankBadge').style.cursor = 'pointer';
+  document.getElementById('rankBadge').style.borderColor = tier.color;
   document.getElementById('xpText').textContent = (parseInt(state.xp)||0) + ' XP';
   document.getElementById('streakCount').textContent = state.streak || 0;
   if (next) {
-    const currentXP = parseInt(state.xp) || 0;
-    const progress = ((currentXP - rank.xp) / (next.xp - rank.xp)) * 100;
-    document.getElementById('xpFill').style.width = Math.min(Math.max(progress,0), 100) + '%';
-    document.getElementById('xpLabel').textContent = `${currentXP - rank.xp} / ${next.xp - rank.xp} XP → ${next.name} ${next.icon}`;
+    const pct = Math.min(Math.max(next.progress, 0), 100);
+    document.getElementById('xpFill').style.width = pct + '%';
+    const nextLabel = next.isNewRank
+      ? `→ ${next.rank.name} ${next.rank.icon} (${next.rank.tier > 0 ? RANK_TIERS[next.rank.tier].name + '!' : ''})`
+      : `→ ${next.rank.name} ${next.sub}`;
+    document.getElementById('xpLabel').textContent = `${next.xpCurrent} / ${next.xpGap} XP ${nextLabel}`;
   } else {
     document.getElementById('xpFill').style.width = '100%';
-    document.getElementById('xpLabel').textContent = 'MAX RANK!';
+    document.getElementById('xpLabel').textContent = 'MAX RANK — Grandmaster X 👑';
   }
-  // Update rank details section if on dashboard
+  // Update rank details section if visible
   const rankDetails = document.getElementById('rankDetailsContent');
   if (rankDetails) renderRankDetails();
 }
@@ -525,10 +614,10 @@ function selectOption(idx) {
     btns[idx].classList.add('correct');
     quizState.correct++;
     quizState.streak = (quizState.streak || 0) + 1;
-    let xp = 10;
-    if (timeTaken < 10) { xp = 15; quizState.fastStreak++; }
+    let xp = 3;
+    if (timeTaken < 10) { xp = 5; quizState.fastStreak++; }
     else { quizState.fastStreak = 0; }
-    xp += Math.min((quizState.streak || 0) * 2, 20);
+    xp += Math.min((quizState.streak || 0), 5);
     quizState.xpEarned += xp;
     showXPpopup(xp);
     spawnMiniConfetti();
@@ -846,7 +935,7 @@ function rateAnswer(stars) {
   btns.forEach((b, i) => b.classList.toggle('active', i < stars));
 
   writtenState.ratings.push(stars);
-  const xp = stars >= 4 ? 20 : 10;
+  const xp = stars >= 4 ? 8 : 4;
   writtenState.xpEarned += xp;
   showXPpopup(xp);
 
@@ -1645,60 +1734,86 @@ function renderRankDetails() {
   const container = document.getElementById('rankDetailsContent');
   if (!container) return;
   const currentXP = parseInt(state.xp) || 0;
-  const currentRank = getCurrentRank();
-  const currentIdx = RANKS.indexOf(currentRank);
+  const { rankIdx, subIdx, level, rank, tier } = getRankAndSub(currentXP);
+  const next = getNextSubRank(currentXP);
 
-  let html = '<div style="max-width:600px;margin:0 auto">';
-  // Current rank card
-  html += `<div class="dash-card" style="text-align:center;margin-bottom:20px;border:2px solid var(--gold)">
-    <div style="font-size:48px;margin-bottom:8px">${currentRank.icon}</div>
-    <div style="font-family:'Playfair Display',serif;font-size:24px;color:var(--gold-bright);margin-bottom:4px">${currentRank.name}</div>
-    <div style="font-size:14px;color:var(--text-muted)">${currentXP} Total XP</div>
+  let html = '<div style="max-width:700px;margin:0 auto;padding:0 4px">';
+
+  // Current rank hero card
+  html += `<div class="rank-hero-card" style="border-color:${tier.color};background:linear-gradient(135deg,${tier.bg},rgba(26,15,10,0.9))">
+    <div class="rank-hero-tier" style="color:${tier.color}">${tier.name} Tier</div>
+    <div class="rank-hero-icon">${rank.icon}</div>
+    <div class="rank-hero-name" style="color:${tier.color}">${rank.name}</div>
+    <div class="rank-hero-sub">Sub-Rank ${SUB_RANKS[subIdx]} <span style="opacity:0.6">(${subIdx + 1}/10)</span></div>
+    <div class="rank-hero-xp">${currentXP.toLocaleString()} Total XP</div>
   </div>`;
 
-  // Next rank progress
-  const next = getNextRank();
+  // Next sub-rank progress
   if (next) {
-    const needed = next.xp - currentRank.xp;
-    const earned = currentXP - currentRank.xp;
-    const pct = Math.min(Math.max((earned / needed) * 100, 0), 100);
-    html += `<div class="dash-card" style="margin-bottom:20px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <span style="font-size:14px;color:var(--text-muted)">Next Rank</span>
-        <span style="font-size:18px">${next.icon} <strong>${next.name}</strong></span>
+    const pct = Math.min(Math.max(next.progress, 0), 100);
+    const nextTier = RANK_TIERS[next.rank.tier];
+    html += `<div class="rank-next-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:13px;color:var(--text-muted)">Progress to next</span>
+        <span style="font-size:16px;color:${nextTier.color}">${next.rank.icon} <strong>${next.rank.name}</strong> ${next.sub}</span>
       </div>
-      <div class="xp-bar-track" style="height:16px;margin-bottom:8px">
-        <div class="xp-bar-fill" style="width:${pct}%"></div>
+      <div class="xp-bar-track" style="height:20px;border-radius:10px;margin-bottom:8px">
+        <div class="xp-bar-fill" style="width:${pct}%;border-radius:10px"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:13px">
-        <span style="color:var(--text-muted)">${earned} XP earned</span>
-        <span style="color:var(--gold)">${needed - earned} XP remaining</span>
+      <div style="display:flex;justify-content:space-between;font-size:12px">
+        <span style="color:var(--text-muted)">${next.xpCurrent} XP earned</span>
+        <span style="color:${nextTier.color}">${next.xpGap - next.xpCurrent} XP needed</span>
       </div>
     </div>`;
   } else {
-    html += '<div class="dash-card" style="text-align:center;color:var(--gold-bright)"><div style="font-size:36px">👑</div>You have reached the maximum rank!</div>';
+    html += '<div class="rank-next-card" style="text-align:center;color:var(--gold-bright)"><div style="font-size:48px;margin-bottom:8px">👑</div><div style="font-size:20px;font-family:Playfair Display,serif">Maximum Rank Reached!</div><div style="font-size:13px;color:var(--text-muted);margin-top:4px">You are a true Grandmaster.</div></div>';
   }
 
-  // Full rank list
-  html += '<div style="margin-top:24px"><h3 style="font-size:14px;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">All Ranks</h3>';
-  html += '<div style="display:flex;flex-direction:column;gap:6px">';
-  RANKS.forEach((r, i) => {
-    const unlocked = currentXP >= r.xp;
-    const isCurrent = i === currentIdx;
-    const isNext = next && i === currentIdx + 1;
-    const borderStyle = isCurrent ? 'border:2px solid var(--gold)' : isNext ? 'border:1px solid var(--gold-dim)' : 'border:1px solid rgba(255,255,255,0.06)';
-    const opacity = unlocked ? '1' : '0.4';
-    html += `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;${borderStyle};opacity:${opacity};background:${isCurrent ? 'rgba(218,165,32,0.1)' : 'transparent'}">
-      <span style="font-size:24px;flex-shrink:0">${unlocked ? r.icon : '🔒'}</span>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:${isCurrent ? '700' : '500'};color:${unlocked ? 'var(--parchment)' : 'var(--text-muted)'}">${r.name}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${r.xp.toLocaleString()} XP${isCurrent ? ' ← You are here' : ''}</div>
-      </div>
-      ${isCurrent ? '<span style="font-size:12px;color:var(--gold)">★ Current</span>' : ''}
-      ${isNext ? '<span style="font-size:12px;color:var(--gold-dim)">Next →</span>' : ''}
+  // Sub-rank progress within current rank
+  html += '<div class="rank-sub-progress-card">';
+  html += '<div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Sub-Ranks for ' + rank.icon + ' ' + rank.name + '</div>';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  for (let s = 0; s < 10; s++) {
+    const subLevel = rankIdx * 10 + s;
+    const unlocked = currentXP >= XP_TABLE[subLevel];
+    const isCurrent = s === subIdx;
+    html += `<div class="sub-rank-pip ${unlocked ? 'unlocked' : ''} ${isCurrent ? 'current' : ''}" style="${unlocked ? 'border-color:' + tier.color + ';color:' + tier.color : ''}">
+      <div class="sub-rank-pip-num">${SUB_RANKS[s]}</div>
+      <div class="sub-rank-pip-xp">${getLevelXP(subLevel)}</div>
     </div>`;
-  });
-  html += '</div></div></div>';
+  }
+  html += '</div></div>';
+
+  // Full rank ladder by tier
+  html += '<div style="margin-top:20px">';
+  for (let t = 0; t < 5; t++) {
+    const tInfo = RANK_TIERS[t];
+    html += `<div class="rank-tier-section" style="border-color:${tInfo.border}">
+      <div class="rank-tier-header" style="color:${tInfo.color}">
+        <span>${tInfo.name}</span>
+        <span style="font-size:11px;opacity:0.7">Ranks ${(t*5)+1}–${(t+1)*5}</span>
+      </div>
+      <div class="rank-tier-body">`;
+    for (let r = t * 5; r < (t + 1) * 5; r++) {
+      const rk = RANKS[r];
+      const rkBaseXP = getLevelXP(r * 10);
+      const rkTopXP = getLevelXP(r * 10 + 9);
+      const unlocked = currentXP >= rkBaseXP;
+      const isCurrent = r === rankIdx;
+      const isMaxed = currentXP >= rkTopXP;
+      html += `<div class="rank-ladder-item ${unlocked ? 'unlocked' : ''} ${isCurrent ? 'current' : ''}" style="${isCurrent ? 'border-color:' + tInfo.color + ';background:' + tInfo.bg : ''}">
+        <div class="rank-ladder-icon">${unlocked ? rk.icon : '🔒'}</div>
+        <div class="rank-ladder-info">
+          <div class="rank-ladder-name" style="color:${unlocked ? 'var(--parchment)' : 'var(--text-muted)'}">${rk.name} <span style="font-size:11px;opacity:0.6">#${r + 1}</span></div>
+          <div class="rank-ladder-xp">${rkBaseXP} – ${rkTopXP.toLocaleString()} XP</div>
+        </div>
+        ${isMaxed ? '<div class="rank-ladder-badge" style="color:' + tInfo.color + '">✓ MAXED</div>' : ''}
+        ${isCurrent ? '<div class="rank-ladder-badge" style="color:' + tInfo.color + '">★ HERE</div>' : ''}
+      </div>`;
+    }
+    html += '</div></div>';
+  }
+  html += '</div></div>';
   container.innerHTML = html;
 }
 
