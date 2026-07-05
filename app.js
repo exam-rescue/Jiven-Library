@@ -73,6 +73,7 @@ function defaultState() {
     totalCorrect: 0,
     dailyChallenges: 0,
     mistakesRevised: 0,
+    revisionHistory: [],
     notesCount: 0,
     assignmentResults: {},
     subjectProgress: {},
@@ -145,6 +146,7 @@ function navigate(page, params) {
   if (page === 'home') renderBookshelf();
   else if (page === 'subject') renderSubject(params);
   else if (page === 'mistakes') renderMistakes();
+  else if (page === 'revision') { /* revision.js handles this */ }
   else if (page === 'dashboard') renderDashboard();
   else if (page === 'notes') renderNotes();
   else if (page === 'achievements') renderAchievements();
@@ -365,7 +367,7 @@ function renderSubject(params) {
   document.getElementById('subjectTitle').textContent = subInfo[params.key] || params.key;
 
   // Mistakes count for this subject
-  const subjectMistakes = state.mistakes.filter(m => m.subject === params.key && !m.resolved);
+  const subjectMistakes = state.mistakes.filter(m => m.subject === params.key);
   document.getElementById('subjectMistakesCount').textContent = subjectMistakes.length;
 
   const grid = document.getElementById('chaptersGrid');
@@ -486,7 +488,7 @@ function selectOption(idx) {
     btns[q.answer].classList.add('correct');
     quizState.wrong++;
     quizState.fastStreak = 0;
-    // Save mistake
+    // Save mistake (PERMANENT - cannot be deleted)
     state.mistakes.push({
       id: Date.now() + Math.random(),
       question: q.q,
@@ -499,6 +501,9 @@ function selectOption(idx) {
       date: getToday(),
       nextReview: getReviewDate(1),
       reviewCount: 0,
+      timesCorrect: 0,
+      _options: q.options.slice(),
+      source: quizState.quizType || 'quiz',
       resolved: false
     });
   }
@@ -851,61 +856,59 @@ function confirmQuitWritten() {
 
 // ===== MISTAKE JOURNAL =====
 function renderMistakes(filterSubject) {
+  const subNames = { maths:'Maths', science:'Science', english:'English', hindi:'Hindi', socialScience:'S.Sci', sanskrit:'Sanskrit', assignment:'Assignment' };
   const tabs = document.getElementById('mistakeTabs');
   tabs.innerHTML = '<button class="mistake-tab' + (!filterSubject ? ' active' : '') + '" onclick="renderMistakes()">All</button>';
 
-  SUBJECT_KEYS.forEach(key => {
-    const count = state.mistakes.filter(m => m.subject === key && !m.resolved).length;
-    const subNames = { maths: 'Maths', science: 'Science', english: 'English', hindi: 'Hindi', socialScience: 'S.Sci', sanskrit: 'Sanskrit' };
-    tabs.innerHTML += `<button class="mistake-tab${filterSubject === key ? ' active' : ''}" onclick="renderMistakes('${key}')">${subNames[key]} <span class="count">${count}</span></button>`;
+  const allSubjects = [...new Set(state.mistakes.map(m => m.subject).filter(Boolean))];
+  allSubjects.forEach(key => {
+    const count = state.mistakes.filter(m => m.subject === key).length;
+    tabs.innerHTML += '<button class="mistake-tab' + (filterSubject === key ? ' active' : '') + '" onclick="renderMistakes(\'' + key + '\')">' + (subNames[key] || key) + ' <span class="count">' + count + '</span></button>';
   });
 
   const list = document.getElementById('mistakesList');
-  let mistakes = state.mistakes.filter(m => !m.resolved);
+  let mistakes = state.mistakes.slice();
   if (filterSubject) mistakes = mistakes.filter(m => m.subject === filterSubject);
-
-  // Sort: due for review first
-  const today = getToday();
-  mistakes.sort((a, b) => (a.nextReview <= today ? 0 : 1) - (b.nextReview <= today ? 0 : 1));
+  mistakes.sort((a, b) => (a.reviewCount || 0) - (b.reviewCount || 0));
 
   if (mistakes.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🎉</div><div class="empty-state-text">No mistakes! You are doing great!</div></div>';
+    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🎉</div><div class="empty-state-text">No mistakes yet! Complete some quizzes first.</div></div>';
     return;
   }
 
-  list.innerHTML = mistakes.map(m => {
-    const isDue = m.nextReview <= today;
-    const reviewIntervals = [1, 3, 7, 14, 30];
-    const nextInterval = reviewIntervals[Math.min(m.reviewCount, reviewIntervals.length - 1)];
-    return `
-      <div class="mistake-card${isDue ? ' due-review' : ''}">
-        <div class="mistake-question">${m.question}</div>
-        <div class="mistake-answers">
-          <div class="mistake-your">Your answer: ${m.yourAnswer}</div>
-          <div class="mistake-correct">Correct: ${m.correctAnswer}</div>
-        </div>
-        ${m.explanation ? `<div style="font-size:13px;color:var(--text-muted);margin-top:8px">💡 ${m.explanation}</div>` : ''}
-        <div class="mistake-meta">
-          <span class="mistake-date">${m.chapterName || ''} • ${m.date}${isDue ? ' • ⏰ Due for review!' : ` • Review in ${Math.ceil((new Date(m.nextReview) - new Date(today)) / 86400000)} days`}</span>
-          <button class="revise-btn" onclick="resolveMistake('${m.id}')">I've Learned This ✓</button>
-        </div>
-      </div>
-    `;
+  // Action buttons
+  let html = '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">';
+  html += '<button class="mode-btn mcq-btn" onclick="startRevisionSession()" style="flex:1;min-width:160px;padding:14px 16px">🔄 Start Revision (' + Math.min(mistakes.length, 20) + ' Qs)</button>';
+  html += '<button class="mode-btn" onclick="generateMistakesPDF()" style="flex:1;min-width:140px;padding:14px 16px">📄 Download Mistakes</button>';
+  html += '</div>';
+
+  html += mistakes.map(m => {
+    const reviewed = m.reviewCount || 0;
+    const correct = m.timesCorrect || 0;
+    const pct = reviewed > 0 ? Math.round(correct / reviewed * 100) : 0;
+    const color = pct >= 80 ? 'var(--success)' : pct >= 40 ? '#FF8F00' : 'var(--error)';
+    const label = reviewed === 0 ? 'New' : pct >= 80 ? 'Mastered' : pct >= 40 ? 'Learning' : 'Needs Work';
+
+    return '<div class="mistake-card">'
+      + '<div style="display:flex;justify-content:space-between;align-items:start;gap:12px"><div style="flex:1">'
+      + '<div class="mistake-question">' + m.question + '</div>'
+      + '<div class="mistake-answers"><div class="mistake-your">Your answer: ' + m.yourAnswer + '</div>'
+      + '<div class="mistake-correct">Correct: ' + m.correctAnswer + '</div></div>'
+      + (m.explanation ? '<div style="font-size:13px;color:var(--text-muted);margin-top:8px">💡 ' + m.explanation + '</div>' : '')
+      + '</div>'
+      + '<div style="text-align:center;flex-shrink:0;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.05)">'
+      + '<div style="font-size:22px;font-weight:700;color:' + color + '">' + pct + '%</div>'
+      + '<div style="font-size:11px;color:var(--text-muted)">' + label + '</div>'
+      + '<div style="font-size:10px;color:var(--text-muted);margin-top:2px">' + correct + '/' + reviewed + ' correct</div>'
+      + '</div></div>'
+      + '<div class="mistake-meta"><span class="mistake-date">' + (subNames[m.subject] || m.subject || '') + ' • ' + (m.chapterName || '') + ' • ' + m.date + '</span></div></div>';
   }).join('');
+
+  list.innerHTML = html;
 }
 
-function resolveMistake(id) {
-  const m = state.mistakes.find(m => String(m.id) === String(id));
-  if (m) {
-    m.resolved = true;
-    m.reviewCount++;
-    state.mistakesRevised++;
-    addXP(5, 'revision');
-    checkAchievements();
-    saveState();
-    renderMistakes();
-  }
-}
+// Mistakes are PERMANENT - resolve is disabled
+function resolveMistake(id) { /* No deleting mistakes! Use Revision Session instead. */ }
 
 // ===== DASHBOARD =====
 function renderDashboard() {
@@ -929,7 +932,7 @@ function renderDashboard() {
     <div class="dash-card"><div class="dash-card-value">${state.xp}</div><div class="dash-card-label">Total XP</div></div>
     <div class="dash-card"><div class="dash-card-value">🔥 ${state.streak}</div><div class="dash-card-label">Current Streak</div></div>
     <div class="dash-card"><div class="dash-card-value">${weekQ}</div><div class="dash-card-label">This Week</div></div>
-    <div class="dash-card"><div class="dash-card-value">${state.mistakes.filter(m => !m.resolved).length}</div><div class="dash-card-label">Mistakes to Fix</div></div>
+    <div class="dash-card"><div class="dash-card-value">${state.mistakes.length}</div><div class="dash-card-label">Total Mistakes</div></div>
   `;
 
   drawRadarChart();
