@@ -133,9 +133,12 @@ function defaultState() {
     notes: [],
     achievements: [],
     dailyChallengeDate: null,
-    activityLog: {}
+    activityLog: {},
+    rankVersion: 2
   };
 }
+
+const RANK_VERSION = 2;
 
 function getStorageKey() {
   return 'jiven_' + (currentUser || '__anon__') + '_progress';
@@ -146,6 +149,11 @@ function loadState() {
     const saved = localStorage.getItem(getStorageKey());
     if (saved) {
       const s = JSON.parse(saved);
+      // Reset if data is from old rank system (missing version or wrong version)
+      if (!s.rankVersion || s.rankVersion < RANK_VERSION) {
+        localStorage.removeItem(getStorageKey());
+        return defaultState();
+      }
       return { ...defaultState(), ...s };
     }
   } catch(e) {}
